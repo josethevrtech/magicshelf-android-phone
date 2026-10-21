@@ -3,7 +3,7 @@
 constexpr bool AndroidOnly=true;
 constexpr const char* ApplicationKey="local.androidphone.vr";
 constexpr const char* DeviceKey="local.androidphone.device";
-constexpr const char* AppTitle="Android Phone";
+constexpr const char* AppTitle="Android Phone (Virtual)";
 constexpr const char* ManifestFile="androidphone.vrmanifest";
 constexpr const char* SettingsFile="android-settings.json";
 constexpr const char* LockFile="android-instance.lock";

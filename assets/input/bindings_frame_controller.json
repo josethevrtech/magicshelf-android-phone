@@ -1,6 +1,6 @@
 {
   "controller_type": "frame_controller",
-  "name": "Android Phone",
+  "name": "Android Phone (Virtual)",
   "description": "While pointing at the phone: thumbstick scrolls, press stick or A to click, B goes back, Y opens Home.",
   "bindings": {
     "/actions/phone": {

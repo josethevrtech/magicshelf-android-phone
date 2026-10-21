@@ -66,7 +66,7 @@ with (out/'device.mesh').open('wb') as f:
   for vertex in group:f.write(struct.pack('<8f',*vertex))
 for i,(name,color,rough,metal) in enumerate(materials):
  (out/f'body-{i}.rgba').write_bytes(struct.pack('<II',1,1)+bytes([round(v*255) for v in color]+[0]))
-(out/'model-info.json').write_text(json.dumps({'name':'Android Phone','author':'Original geometry for this installation','screen':[720,1600],'body_mm':[77,175,8.4],'triangles':sum(map(len,groups))//3},indent=2)+'\n')
+(out/'model-info.json').write_text(json.dumps({'name':'Android Phone (Virtual)','author':'Original geometry for this installation','screen':[720,1600],'body_mm':[77,175,8.4],'triangles':sum(map(len,groups))//3},indent=2)+'\n')
 # Vector-drawn taskbar icon: a simple phone silhouette matching this device.
 s=cairo.ImageSurface(cairo.FORMAT_ARGB32,256,256);c=cairo.Context(s)
 def rounded(x,y,w,h,r,color):
@@ -80,4 +80,4 @@ c.set_source_rgb(.60,.89,.86);c.set_line_width(5)
 for yy in [73,99,125]:c.move_to(99,yy);c.line_to(157,yy);c.stroke()
 rounded(111,224,34,4,2,(.72,.88,.89))
 s.write_to_png(str(base/'android-phone-icon.png'))
-print('Android Phone:',sum(map(len,groups))//3,'triangles')
+print('Android Phone (Virtual):',sum(map(len,groups))//3,'triangles')

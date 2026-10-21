@@ -1,7 +1,7 @@
-# Android Phone
+# Android Phone (Virtual)
 
 A free creation for [MagicShelf](https://github.com/josethevrtech/magicshelf),
-for **SteamOS and Steam Frame only**. This repository owns the Android Phone's
+for **SteamOS and Steam Frame only**. This repository owns the Android Phone (Virtual)'s
 application code, controls, backend integration, settings and releases.
 
 ## Development
@@ -50,7 +50,7 @@ Runtime state is in `~/.local/share/magicshelf/module-data/` under the stable
 creation ID. The old shared `Applications/DigitalPartner/vr` folder and legacy
 services are not required by this package. Never run both generations together.
 
-Version 0.2.3 updates the collection preview to show the Android home screen.
+Version 0.2.4 updates the collection preview to show the Android home screen.
 The capture is rendered with this creation's original phone model; runtime behavior
 and permissions are unchanged.
 

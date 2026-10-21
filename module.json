@@ -2,9 +2,9 @@
   "schema_version": 1,
   "api_version": 2,
   "id": "org.magicshelf.android-phone",
-  "version": "0.2.3",
-  "name": "Android Phone",
-  "description": "Your own Android phone, right beside you in VR.",
+  "version": "0.2.4",
+  "name": "Android Phone (Virtual)",
+  "description": "A virtual Android phone, right beside you in VR.",
   "author": "josethevrtech",
   "license": "MIT (source); external assets retain their licenses",
   "platform": "linux",
@@ -23,7 +23,7 @@
   "price": 0,
   "links": [
     {
-      "label": "Android Phone on GitHub",
+      "label": "Android Phone (Virtual) on GitHub",
       "url": "https://github.com/josethevrtech/magicshelf-android-phone"
     },
     {
@@ -33,7 +33,7 @@
   ],
   "category": "Utilities",
   "tagline": "A little Android. A lot of possibility.",
-  "about": "Keep your Android apps within reach. Pick up the phone, move it around your space, or return it to the shelf. Its screen supports controller taps, swipes, typing and brightness controls. Turn it off to stop Android and its audio; installed apps and data remain for next time.",
+  "about": "Android Phone (Virtual) keeps your Android apps within reach. Pick up the phone, move it around your space, or return it to the shelf. Its screen supports controller taps, swipes, typing and brightness controls. Turn it off to stop Android and its audio; installed apps and data remain for next time.",
   "screenshots": [
     {
       "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone-home.png",
