@@ -50,6 +50,10 @@ Runtime state is in `~/.local/share/magicshelf/module-data/` under the stable
 creation ID. The old shared `Applications/DigitalPartner/vr` folder and legacy
 services are not required by this package. Never run both generations together.
 
+Version 0.2.3 updates the collection preview to show the Android home screen.
+The capture is rendered with this creation's original phone model; runtime behavior
+and permissions are unchanged.
+
 ## Android runtime
 
 Install Steam's Lepton runtime first. On first start the creation prepares its

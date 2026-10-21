@@ -2,7 +2,7 @@
   "schema_version": 1,
   "api_version": 2,
   "id": "org.magicshelf.android-phone",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "name": "Android Phone",
   "description": "Your own Android phone, right beside you in VR.",
   "author": "josethevrtech",
@@ -36,8 +36,8 @@
   "about": "Keep your Android apps within reach. Pick up the phone, move it around your space, or return it to the shelf. Its screen supports controller taps, swipes, typing and brightness controls. Turn it off to stop Android and its audio; installed apps and data remain for next time.",
   "screenshots": [
     {
-      "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone.png",
-      "caption": "The original graphite phone, rendered by MagicShelf."
+      "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone-home.png",
+      "caption": "The Android home screen on the original MagicShelf phone."
     },
     {
       "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone-settings.png",

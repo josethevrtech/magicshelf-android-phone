@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "org.magicshelf.android-phone",
   "name": "Android Phone",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Android Phone, a free creation for MagicShelf on Steam Frame.",
   "repository": "https://github.com/josethevrtech/magicshelf-android-phone",
   "sdk_version": "1.0.0",
