@@ -11,7 +11,9 @@ for name in ('start','control','cleanup'):
     shutil.copy2(root/'runtime'/(name+'.py'),stage/'bin'/name)
     (stage/'bin'/name).chmod(0o755)
 shutil.copytree(root/'backend',stage/'backend',ignore=shutil.ignore_patterns('__pycache__'))
-shutil.copytree(root/'assets',stage/'assets')
+# Only original generated phone assets and controller bindings are distributable.
+for name in ('input','android-phone'):
+    shutil.copytree(root/'assets'/name,stage/'assets'/name)
 for name in ('LICENSE','OPENVR-LICENSE.txt'):shutil.copy2(root/name,stage/name)
 (stage/'module.json').write_text(json.dumps(meta,indent=2)+'\n')
 subprocess.run([sys.executable,str(sdk/'tools/package_creation.py'),str(stage),'--output',str(root/'dist'),'--repository','josethevrtech/magicshelf-android-phone'],check=True)
