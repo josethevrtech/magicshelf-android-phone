@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "api_version": 2,
+  "id": "org.magicshelf.android-phone",
+  "version": "0.2.2",
+  "name": "Android Phone",
+  "description": "Your own Android phone, right beside you in VR.",
+  "author": "josethevrtech",
+  "license": "MIT (source); external assets retain their licenses",
+  "platform": "linux",
+  "architecture": "aarch64",
+  "entrypoint": "bin/start",
+  "control_entrypoint": "bin/control",
+  "cleanup_entrypoint": "bin/cleanup",
+  "startup_timeout_sec": 180,
+  "permissions": [
+    "vr-overlay",
+    "external-runtime",
+    "user-files",
+    "network"
+  ],
+  "memory_mb": 1024,
+  "price": 0,
+  "links": [
+    {
+      "label": "Android Phone on GitHub",
+      "url": "https://github.com/josethevrtech/magicshelf-android-phone"
+    },
+    {
+      "label": "MagicShelf framework",
+      "url": "https://github.com/josethevrtech/magicshelf"
+    }
+  ],
+  "category": "Utilities",
+  "tagline": "A little Android. A lot of possibility.",
+  "about": "Keep your Android apps within reach. Pick up the phone, move it around your space, or return it to the shelf. Its screen supports controller taps, swipes, typing and brightness controls. Turn it off to stop Android and its audio; installed apps and data remain for next time.",
+  "screenshots": [
+    {
+      "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone.png",
+      "caption": "The original graphite phone, rendered by MagicShelf."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone-settings.png",
+      "caption": "On-device controls for brightness, size and placement."
+    }
+  ],
+  "credits": [
+    {
+      "name": "josethevrtech",
+      "role": "Creation, original phone model and integration",
+      "url": "https://github.com/josethevrtech",
+      "license": "Original procedural phone geometry."
+    }
+  ]
+}

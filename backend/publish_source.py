@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+import json,os,pathlib,subprocess,time
+target=pathlib.Path(os.environ['MAGICSHELF_DATA_DIR'])/'android-source.json'
+for _ in range(40):
+    data=json.loads(subprocess.check_output(['pw-dump'],timeout=10))
+    clients={x['id'] for x in data if x['type']=='PipeWire:Interface:Client' and x.get('info',{}).get('props',{}).get('window.x11.display')==os.environ['DISPLAY'] and x.get('info',{}).get('props',{}).get('application.process.binary')=='gamescope'}
+    nodes=[x for x in data if x['type']=='PipeWire:Interface:Node' and x.get('info',{}).get('props',{}).get('client.id') in clients and x.get('info',{}).get('props',{}).get('media.class')=='Video/Source']
+    if len(nodes)==1:
+        temp=target.with_suffix('.tmp')
+        temp.write_text(json.dumps({'display':os.environ['DISPLAY'],'node':nodes[0]['id'],'serial':int(nodes[0]['info']['props']['object.serial']),'started':time.time()}))
+        temp.replace(target)
+        break
+    time.sleep(.25)
+else:
+    raise RuntimeError('Cannot identify private Android display')
