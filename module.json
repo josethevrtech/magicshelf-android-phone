@@ -2,7 +2,7 @@
   "schema_version": 1,
   "api_version": 2,
   "id": "org.magicshelf.android-phone",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "name": "Android Phone (Virtual)",
   "description": "A virtual Android phone, right beside you in VR.",
   "author": "josethevrtech",
@@ -40,7 +40,7 @@
       "caption": "The Android home screen on the original MagicShelf phone."
     },
     {
-      "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone-settings.png",
+      "url": "https://raw.githubusercontent.com/josethevrtech/magicshelf-android-phone/main/media/phone-settings-virtual.png",
       "caption": "On-device controls for brightness, size and placement."
     }
   ],

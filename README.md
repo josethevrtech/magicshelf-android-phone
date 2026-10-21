@@ -50,7 +50,7 @@ Runtime state is in `~/.local/share/magicshelf/module-data/` under the stable
 creation ID. The old shared `Applications/DigitalPartner/vr` folder and legacy
 services are not required by this package. Never run both generations together.
 
-Version 0.2.4 updates the collection preview to show the Android home screen.
+Version 0.2.5 updates the collection preview to show the Android home screen.
 The capture is rendered with this creation's original phone model; runtime behavior
 and permissions are unchanged.
 
