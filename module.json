@@ -2,7 +2,7 @@
   "schema_version": 1,
   "api_version": 2,
   "id": "org.magicshelf.android-phone",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "name": "Android Phone (Virtual)",
   "description": "A virtual Android phone, right beside you in VR.",
   "author": "josethevrtech",
@@ -50,6 +50,17 @@
       "role": "Creation, original phone model and integration",
       "url": "https://github.com/josethevrtech",
       "license": "Original procedural phone geometry."
+    }
+  ],
+  "minimum_framework_version": "0.3.8",
+  "steam_requirements": [
+    {
+      "appid": 3029110,
+      "title": "Android support",
+      "files": [
+        "Lepton/lepton",
+        "Lepton/version.txt"
+      ]
     }
   ]
 }
