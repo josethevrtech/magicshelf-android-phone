@@ -54,17 +54,20 @@ Version 0.2.5 updates the collection preview to show the Android home screen.
 The capture is rendered with this creation's original phone model; runtime behavior
 and permissions are unchanged.
 
-## Android runtime
+## First use
 
-Install Steam's Lepton runtime first. On first start the creation prepares its
-own version-checked Lepton copy and a fresh `magicshelf-phone` Android context.
-It does not modify Steam's runtime. Android data persists separately from
-package updates. The exact `lepton-magicshelf-phone` container is stopped on
-normal exit and by systemd's cleanup command after a crash.
+Subscribe and download in MagicShelf 0.3.8 or newer. If Android support is not
+installed, choose **Set up**, then **Install with Steam**. Finish the download
+in Steam and return to MagicShelf. The card becomes ready automatically. Turn it
+On to open your phone. No terminal or manual runtime copying is needed.
 
-The phone model and icon are original procedural assets, generated during the
-build with `tools/generate_model.py` (pycairo). Android/Lepton and user APKs
-retain their own licenses and are not included in the package.
+The creation prepares its own Android support files without modifying Steam's
+installation. Interrupted preparation retries safely. Android apps and data stay
+in their private directory across creation updates and runtime preparation.
+Off stops Android and its audio; On resumes the saved Android environment.
+
+The phone model and icon are original procedural assets. Steam supplies Lepton;
+Android and user APKs retain their own licenses.
 
 Project source is MIT licensed. Valve's OpenVR headers retain their included
 license. All creations and subscriptions are free; artist support is optional.
