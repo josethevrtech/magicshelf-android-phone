@@ -2,19 +2,20 @@
 #include "render.h"
 
 enum class PhoneAction { NoAction, Back, Room, Hand, Recenter, Smaller, Larger,
-                         TurnLeft, TurnRight, Keyboard, Hide, Reset, Dimmer, Brighter, Home, BrightnessSlider, Dock };
+                         TurnLeft, TurnRight, Keyboard, Hide, Reset, Dimmer, Brighter, Home, BrightnessSlider, Dock, FontSettings, FontSmaller, FontLarger, FontReset };
 struct PhoneButton {
  int x,y,w,h; PhoneAction action; const char* label;
  bool contains(int px,int py)const{return px>=x&&px<x+w&&py>=y&&py<y+h;}
 };
 // These rectangles use the same 480 x 1046 coordinates as the live game.
-const std::array<PhoneButton,14> phoneButtons{{
+const std::array<PhoneButton,15> phoneButtons{{
  {24,112,AndroidOnly?208:432,72,PhoneAction::Back,AndroidOnly?"Resume app":"Back to pet"},
 #ifdef ANDROID_PHONE
  {248,112,208,72,PhoneAction::Home,"Home screen"},
 #endif
+ {24,202,432,66,PhoneAction::FontSettings,"Text size"},
  {24,310,208,80,PhoneAction::Room,"In the room"},
- {248,310,208,80,PhoneAction::Hand,"Left hand"},
+ {248,310,208,80,PhoneAction::Hand,"Left wrist"},
  {24,406,208,72,PhoneAction::Dock,"Return to dock"},
  {248,406,208,72,PhoneAction::Recenter,"Bring closer"},
  {24,536,208,76,PhoneAction::Smaller,"−  Smaller"},
@@ -49,6 +50,20 @@ void centered(Canvas&c,const PhoneButton&b,double size,double r,double g,double 
  cairo_select_font_face(c.c,"sans",CAIRO_FONT_SLANT_NORMAL,CAIRO_FONT_WEIGHT_NORMAL);
  cairo_set_font_size(c.c,size);cairo_text_extents_t ext;cairo_text_extents(c.c,b.label,&ext);
  c.text(b.x+(b.w-ext.width)/2-ext.x_bearing,b.y+(b.h-ext.height)/2-ext.y_bearing,b.label,size,r,g,blue);
+}
+const std::array<PhoneButton,4> fontButtons{{
+ {24,112,432,72,PhoneAction::Back,"Back to device settings"},
+ {24,406,208,80,PhoneAction::FontSmaller,"Smaller text"},
+ {248,406,208,80,PhoneAction::FontLarger,"Larger text"},
+ {24,536,432,72,PhoneAction::FontReset,"Default text size"}
+}};
+PhoneAction fontActionAt(int x,int y){for(const auto&b:fontButtons)if(b.contains(x,y))return b.action;return PhoneAction::NoAction;}
+void drawPhoneTextSettings(Canvas&c,float fontScale){
+ c.fill(.035,.048,.065);c.text(24,33,"ANDROID PHONE",19,.96,.57,.19);c.text(24,85,"Text size",43);
+ c.text(24,270,"Android app text",27);c.text(24,331,std::to_string((int)std::round(fontScale*100))+"%",43);
+ c.text(24,685,"Changes apply to Android apps.",23,.81,.9,.94);
+ c.text(24,724,"Some apps use their own text size.",22,.58,.71,.76);
+ for(const auto&b:fontButtons){rounded(c,b.x,b.y,b.w,b.h,14,.09,.13,.17);centered(c,b,24,.91,.95,.97);}
 }
 void drawPhoneSettings(Canvas&c,bool wrist,float size,bool connected,bool protectedCare,float brightness=1.f,bool docked=false){
  c.fill(.035,.048,.065);

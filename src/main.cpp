@@ -58,12 +58,13 @@ int main(int argc,char**argv){try{
  unsigned char transparent[4]={0,0,0,0};if(dash)check(ov->SetOverlayRaw(dash,transparent,1,1,4),"transparent launcher");
  Canvas ui(SettingsWidth,SettingsHeight),loading(256,256);loading.fill(.06,.1,.13);loading.text(20,115,AndroidOnly?"Starting Android...":"Starting game...",22);renderer.screen(loading);
  const bool androidOpen=AndroidOnly;bool androidHasFrame=false,settingsOpen=false,recallRequested=false,haveWristPose=false;M wristFallback=identity();
+ auto placementStarted=std::chrono::steady_clock::now();bool startupPlacement=true;
  bool visible=true,wrist=false,docked=false,placed=false,dirty=true,ready=false;float size=DefaultSize,yaw=0,brightness=.7f;int mode=0;M world=identity(),lastModel=identity(),lastPlane=identity();float lastSize=1,lastWidth=PhonePlaneWidth;RoomGrab grab;ShakeToDock shake;bool dockCandidate=false,returnedHome=false;
- auto*settings=json_object_from_file((base+"/"+SettingsFile).c_str());if(settings){brightness=std::clamp((float)readnum(settings,"brightness",.7),.25f,1.f);visible=readnum(settings,"visible",1);wrist=readnum(settings,"wrist",0);docked=readnum(settings,"docked",0);if(docked)wrist=false;size=std::clamp((float)readnum(settings,"size",DefaultSize),.6f,3.f);yaw=readnum(settings,"yaw",0);mode=std::clamp((int)readnum(settings,"mode",0),0,2);
+ auto*settings=json_object_from_file((base+"/"+SettingsFile).c_str());if(settings){brightness=std::clamp((float)readnum(settings,"brightness",.7),.25f,1.f);visible=true;wrist=readnum(settings,"wrist",0);docked=readnum(settings,"docked",0);if(docked)wrist=false;size=std::clamp((float)readnum(settings,"size",DefaultSize),.6f,3.f);yaw=readnum(settings,"yaw",0);mode=std::clamp((int)readnum(settings,"mode",0),0,2);
   json_object* savedPose=nullptr;if(json_object_object_get_ex(settings,"room_pose",&savedPose)&&json_object_is_type(savedPose,json_type_array)&&json_object_array_length(savedPose)==16){M restored{};for(int i=0;i<16;i++)restored[i]=json_object_get_double(json_object_array_get_idx(savedPose,i));if(validRoomPose(restored)){world=restored;placed=true;std::cerr<<"Restored user room placement\n";}}
   json_object_put(settings);}
  auto save=[&](){auto*j=json_object_new_object();json_object_object_add(j,"app",json_object_new_string(androidOpen?"android":"pet"));json_object_object_add(j,"brightness",json_object_new_double(brightness));json_object_object_add(j,"visible",json_object_new_boolean(visible));json_object_object_add(j,"wrist",json_object_new_boolean(wrist));json_object_object_add(j,"docked",json_object_new_boolean(docked));json_object_object_add(j,"size",json_object_new_double(size));json_object_object_add(j,"yaw",json_object_new_double(yaw));json_object_object_add(j,"mode",json_object_new_int(mode));if(placed&&validRoomPose(world)){auto*a=json_object_new_array();for(float v:world)json_object_array_add(a,json_object_new_double(v));json_object_object_add(j,"room_pose",a);}json_object_to_file((base+"/"+SettingsFile+".tmp").c_str(),j);json_object_put(j);fs::rename(base+"/"+SettingsFile+".tmp",base+"/"+SettingsFile);};
- auto recenter=[&](M head){grab.end();docked=false;V p=point(head,{-.12f,-.10f,-.60f}),h=point(head,{0,0,0});V z=norm(sub(h,p)),x=norm(cross({0,1,0},z)),y=cross(z,x);world=pose(x,y,z,p);placed=true;};
+ auto recenter=[&](M head,bool fromShelf=false){grab.end();docked=false;int columns=std::clamp(dock.layout.count,1,4);float offsetX=fromShelf&&dock.slot>=0?(dock.slot%columns-(columns-1)*.5f)*.24f:-.12f;float offsetY=-.10f-(fromShelf&&dock.slot>=0?dock.slot/columns*.24f:0);V p=point(head,{offsetX,offsetY,-.60f}),h=point(head,{0,0,0});V z=norm(sub(h,p)),x=norm(cross({0,1,0},z)),y=cross(z,x);world=pose(x,y,z,p);placed=true;};
  bool keyboardOwned=false;PetKeyboardRequest petKeyboard;
  auto closeKeyboard=[&](){petKeyboard.cancel();if(keyboardOwned){ov->HideKeyboard();keyboardOwned=false;}};
  auto keyboard=[&](){
@@ -76,12 +77,14 @@ int main(int argc,char**argv){try{
  std::unique_ptr<Capture>androidCapture;std::unique_ptr<AndroidTouch>androidInput;uint32_t androidNode=0;uint64_t androidUploaded=0;double androidStarted=0;
  auto lastUI=lastSource;auto lastSettingsTap=lastSource;
  auto lastControlsPoll=lastSource,lastBrightnessCommand=lastSource,lastNavigation=std::chrono::steady_clock::now();double controlsRevision=0;
+ float fontScale=1.f;bool textSettings=false;bool gripHeld=false;
  bool pointerOnScreen=false,pointerOnHandle=false,queuedClick=false,brightnessDragging=false;VREvent_t lastPointer{};
  uint32_t pointerController=k_unTrackedDeviceIndexInvalid;int pointerX=0,pointerY=0;
  auto finishBrightness=[&](){if(!brightnessDragging)return;brightnessDragging=false;lastBrightnessCommand=std::chrono::steady_clock::now();save();androidCommand("{\"op\":\"brightness\",\"value\":"+std::to_string(brightness)+"}");};
- auto toggleSettings=[&](bool open){closeKeyboard();finishBrightness();if(androidInput)androidInput->end();settingsOpen=open;dirty=true;if(!open){uploaded=0;androidUploaded=0;}};
+ auto toggleSettings=[&](bool open){closeKeyboard();finishBrightness();if(androidInput)androidInput->end();settingsOpen=open;textSettings=false;dirty=true;if(!open){uploaded=0;androidUploaded=0;}};
  auto openFromLauncher=[&](){docked=false;visible=true;toggleSettings(true);recallRequested=true;};
  auto returnToDock=[&](const char*reason="command"){
+  startupPlacement=true;placementStarted=std::chrono::steady_clock::now();
   if(dock.slot<0)return;
   grab.end();shake.reset();dockCandidate=false;returnedHome=true;finishBrightness();
   if(androidInput)androidInput->end();if(input)input->end();
@@ -100,7 +103,7 @@ int main(int argc,char**argv){try{
    lastSource=now;dirty=true;}
   if(AndroidOnly&&now-lastControlsPoll>std::chrono::milliseconds(200)){
    lastControlsPoll=now;auto*c=json_object_from_file((base+"/android-controls.json").c_str());
-   if(c){if(androidInput)androidInput->configure((int)readnum(c,"container_pid"));double revision=readnum(c,"updated");float level=std::clamp((float)readnum(c,"brightness",brightness),.25f,1.f);
+   if(c){if(androidInput)androidInput->configure((int)readnum(c,"container_pid"));float incomingFont=std::clamp((float)readnum(c,"font_scale",fontScale),.85f,1.5f);if(fabsf(incomingFont-fontScale)>.001f){fontScale=incomingFont;dirty=true;}double revision=readnum(c,"updated");float level=std::clamp((float)readnum(c,"brightness",brightness),.25f,1.f);
     if(!brightnessDragging&&revision!=controlsRevision&&(now-lastBrightnessCommand>std::chrono::milliseconds(1500)||fabsf(level-brightness)<.01f)){
      controlsRevision=revision;if(fabsf(level-brightness)>.001f){brightness=level;dirty=true;save();}
     }json_object_put(c);}
@@ -112,12 +115,14 @@ int main(int argc,char**argv){try{
   }
   if(androidCapture){androidCapture->poll();if(androidCapture->frames!=androidUploaded){if(androidOpen&&!settingsOpen&&visible)renderer.screenPixels(androidCapture->info.size.width,androidCapture->info.size.height,androidCapture->rgba.data());androidUploaded=androidCapture->frames;if(!androidHasFrame){androidHasFrame=true;dirty=true;std::cerr<<"Android screen received\n";}}}if(androidInput)androidInput->tick();
   TrackedDevicePose_t poses[k_unMaxTrackedDeviceCount];VRSystem()->GetDeviceToAbsoluteTrackingPose(TrackingUniverseStanding,.011f,poses,k_unMaxTrackedDeviceCount);M head=fromvr(poses[0].mDeviceToAbsoluteTracking);dock.refresh();dock.show(poses[0].bPoseIsValid);if(dock.takeHomeRequest()&&visible)returnToDock("layout changed");if(!placed&&!docked&&poses[0].bPoseIsValid)recenter(head);
+  if(startupPlacement&&poses[0].bPoseIsValid){if(!docked||dock.available)startupPlacement=false;else if(now-placementStarted>std::chrono::seconds(1)){recenter(head,true);startupPlacement=false;save();std::cerr<<"Dock unavailable; creation opened in room space\n";}}
   if(recallRequested&&poses[0].bPoseIsValid){auto left=VRSystem()->GetTrackedDeviceIndexForControllerRole(TrackedControllerRole_LeftHand);if(!wrist||left>=k_unMaxTrackedDeviceCount||!poses[left].bPoseIsValid){recenter(head);haveWristPose=false;}recallRequested=false;save();}
   if(grab.active){
    if(wrist||!visible||!poses[0].bPoseIsValid||grab.controller>=k_unMaxTrackedDeviceCount||!poses[grab.controller].bPoseIsValid){grab.end();save();}
    else{world=grab.follow(fromvr(poses[grab.controller].mDeviceToAbsoluteTracking));VRControllerState_t state{};
     if(grab.watchTriggerRelease&&VRSystem()->GetControllerState(grab.controller,&state,sizeof(state))&&!(state.ulButtonPressed&ButtonMaskFromId(k_EButton_SteamVR_Trigger))){releaseGrab();}}
   }
+  if(!grab.active)gripHeld=false;
   VREvent_t e;while(VRSystem()->PollNextEvent(&e,sizeof(e))){
    if(e.eventType==VREvent_KeyboardOpened_Global)keyboardOwned=e.data.keyboard.overlayHandle==device;
    if(e.eventType==VREvent_KeyboardClosed_Global&&e.data.keyboard.overlayHandle==device)keyboardOwned=false;
@@ -144,7 +149,7 @@ int main(int argc,char**argv){try{
    }
    if(e.eventType==VREvent_MouseButtonUp&&e.data.mouse.button==VRMouseButton_Left)finishBrightness();
    if(e.eventType==VREvent_MouseButtonUp&&e.data.mouse.button==VRMouseButton_Left&&androidInput)androidInput->end();
-   if(e.eventType==VREvent_MouseButtonUp&&e.data.mouse.button==VRMouseButton_Left&&grab.active){if(e.trackedDeviceIndex==grab.controller||e.trackedDeviceIndex==k_unTrackedDeviceIndexInvalid||e.trackedDeviceIndex==0){releaseGrab();}continue;}
+   if(e.eventType==VREvent_MouseButtonUp&&e.data.mouse.button==VRMouseButton_Left&&grab.active&&!gripHeld){if(e.trackedDeviceIndex==grab.controller||e.trackedDeviceIndex==k_unTrackedDeviceIndexInvalid||e.trackedDeviceIndex==0){releaseGrab();}continue;}
    if(e.eventType==VREvent_KeyboardClosed)keyboardOwned=false;
    if(grab.active)continue;
    // Read chars only from this overlay, not the duplicate global VR events.
@@ -181,9 +186,13 @@ int main(int argc,char**argv){try{
      }
      // Consume every screen event here; none may leak through to the game.
      if(down&&now-lastSettingsTap>=std::chrono::milliseconds(180)){
-      lastSettingsTap=now;PhoneAction action=phoneActionAt(x,y);
+      lastSettingsTap=now;PhoneAction action=textSettings?fontActionAt(x,y):phoneActionAt(x,y);
       switch(action){
-       case PhoneAction::Back:toggleSettings(false);break;
+       case PhoneAction::Back:if(textSettings)textSettings=false;else toggleSettings(false);break;
+       case PhoneAction::FontSettings:textSettings=true;break;
+       case PhoneAction::FontSmaller:fontScale=std::max(.85f,fontScale-.05f);break;
+       case PhoneAction::FontLarger:fontScale=std::min(1.5f,fontScale+.05f);break;
+       case PhoneAction::FontReset:fontScale=1.f;break;
        case PhoneAction::Home:androidCommand("{\"op\":\"home\"}");toggleSettings(false);break;
        
        case PhoneAction::Room:grab.end();wrist=false;if(docked){world=undockedRoomPose(lastModel,yaw);placed=true;docked=false;}break;
@@ -203,6 +212,7 @@ int main(int argc,char**argv){try{
        case PhoneAction::NoAction:break;
       }
       if(action!=PhoneAction::NoAction){
+       if(action==PhoneAction::FontSmaller||action==PhoneAction::FontLarger||action==PhoneAction::FontReset)androidCommand("{\"op\":\"font_scale\",\"value\":"+std::to_string(fontScale)+"}");
        if(AndroidOnly&&(action==PhoneAction::Dimmer||action==PhoneAction::Brighter)){lastBrightnessCommand=now;androidCommand("{\"op\":\"brightness\",\"value\":"+std::to_string(brightness)+"}");}
        dirty=true;save();ov->TriggerLaserMouseHapticVibration(device,.025f,80,.15f);std::cerr<<"Phone settings action "<<(int)action<<" at "<<x<<","<<y<<"\n";}
      }
@@ -218,10 +228,20 @@ int main(int argc,char**argv){try{
   }
   if(navigation){
    auto controller=grab.active?grab.controller:pointerController;
-   bool focused=visible&&(!docked||dock.available)&&poses[0].bPoseIsValid&&controller<k_unMaxTrackedDeviceCount&&poses[controller].bPoseIsValid&&(grab.active||(AndroidOnly&&pointerOnScreen&&ov->IsHoverTargetOverlay(device)));
+   bool nearHand=false;
+   if(!grab.active&&!wrist&&visible)for(auto handRole:{TrackedControllerRole_LeftHand,TrackedControllerRole_RightHand}){auto hand=VRSystem()->GetTrackedDeviceIndexForControllerRole(handRole);if(hand>=k_unMaxTrackedDeviceCount||!poses[hand].bPoseIsValid)continue;V local=mul(point(inverse(lastModel),point(fromvr(poses[hand].mDeviceToAbsoluteTracking),{0,0,0})),1/lastSize);if(std::abs(local[0])<BodyX+.07f&&std::abs(local[1])<BodyY+.07f&&std::abs(local[2]-ScreenZ)<.10f){controller=hand;nearHand=true;break;}}
+   bool focused=visible&&(!docked||dock.available)&&poses[0].bPoseIsValid&&controller<k_unMaxTrackedDeviceCount&&poses[controller].bPoseIsValid&&(grab.active||nearHand||ov->IsHoverTargetOverlay(device));
    int role=controller<k_unMaxTrackedDeviceCount?(int)VRSystem()->GetControllerRoleForTrackedDeviceIndex(controller):0;
    float dt=std::chrono::duration<float>(now-lastNavigation).count();lastNavigation=now;
    auto action=navigation->update(focused,role,dt,grab.active);
+   if(grab.active&&gripHeld&&(!action.gripAvailable||!action.grip)){releaseGrab();gripHeld=false;}
+   if(!grab.active&&focused&&!wrist&&action.gripPressed){
+    V grabbed=point(lastModel,{0,0,0});
+    if(docked){world=undockedRoomPose(lastModel,yaw);docked=false;placed=true;}
+    closeKeyboard();finishBrightness();if(androidInput)androidInput->end();if(input)input->end();queuedClick=false;pointerOnScreen=false;
+    shake.reset();dockCandidate=false;grab.beginAt(controller,fromvr(poses[controller].mDeviceToAbsoluteTracking),world,grabbed,false);gripHeld=true;
+    ov->TriggerLaserMouseHapticVibration(device,.035f,80,.25f);std::cerr<<"Grip pickup controller="<<controller<<"\n";
+   }
    if(grab.active){
     float depth=action.scrollY;bool axisAvailable=action.axisAvailable;
     if(!action.axisAvailable){VRControllerState_t state{};if(VRSystem()->GetControllerState(controller,&state,sizeof(state)))for(int axis=0;axis<5;axis++)if(VRSystem()->GetInt32TrackedDeviceProperty(controller,(ETrackedDeviceProperty)(Prop_Axis0Type_Int32+axis))==k_eControllerAxis_Joystick){depth=ControllerNav::deflection(state.rAxis[axis].y);axisAvailable=true;break;}}
@@ -239,7 +259,7 @@ int main(int argc,char**argv){try{
   if(androidOpen&&!androidHasFrame&&!settingsOpen&&dirty){ui.fill(.035,.048,.065);ui.text(30,480,"Starting Android...",33);ui.text(30,530,AndroidOnly?"Bottom bezel button: settings":"Center button: settings",23);renderer.screen(ui);dirty=false;}
   if(settingsOpen&&(dirty||now-lastUI>std::chrono::seconds(30))){
    auto*care=json_object_from_file((base+"/care-mode.json").c_str());bool protectedCare=readstr(care,"mode")=="no-death";if(care)json_object_put(care);
-   drawPhoneSettings(ui,wrist,size,AndroidOnly?androidHasFrame:hasFrame,protectedCare,brightness,docked);renderer.screen(ui);dirty=false;lastUI=now;
+   if(textSettings)drawPhoneTextSettings(ui,fontScale);else drawPhoneSettings(ui,wrist,size,AndroidOnly?androidHasFrame:hasFrame,protectedCare,brightness,docked);renderer.screen(ui);dirty=false;lastUI=now;
   }
   if(grab.active){
    M hand=fromvr(poses[grab.controller].mDeviceToAbsoluteTracking);

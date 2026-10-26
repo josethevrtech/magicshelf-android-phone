@@ -51,7 +51,11 @@ int main(){
  assert(!onPhoneBody({BodyX+.01f,0,ScreenZ}));
  M malformed=identity();malformed[0]=2;assert(!validRoomPose(malformed));
  malformed=identity();malformed[3]=.5;assert(!validRoomPose(malformed));
- assert(phoneActionAt(240,260)==PhoneAction::NoAction); // status text
+ assert(phoneActionAt(240,260)==PhoneAction::FontSettings);
+ assert(fontActionAt(120,440)==PhoneAction::FontSmaller);
+ assert(fontActionAt(350,440)==PhoneAction::FontLarger);
+ assert(fontActionAt(240,570)==PhoneAction::FontReset);
+ assert(fontActionAt(240,720)==PhoneAction::NoAction);
  assert(phoneActionAt(240,570)==PhoneAction::NoAction); // gap between size buttons
  assert(phoneActionAt(479,1045)==PhoneAction::NoAction);
  assert(fabsf(ScreenX/ScreenY-(float)ScreenWidth/ScreenHeight)<.00001f);

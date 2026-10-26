@@ -28,4 +28,8 @@ c++ "${flags[@]}" src/main.cpp -o build/runtime/android-phone-vr   -L"$vr" -lope
 cp assets/input/*.json build/runtime/assets/input/
 echo 'Build and unit checks passed. This command does not start or replace a running creation.'
 
-python3 tools/generate_model.py
+if [[ "${MAGICSHELF_SKIP_MODEL:-0}" == 1 ]]; then
+  test -f assets/android-phone/device.mesh || { echo 'Generate the phone model before skipping model generation.' >&2; exit 1; }
+else
+  python3 tools/generate_model.py
+fi
