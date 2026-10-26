@@ -17,6 +17,19 @@ if not stamp.exists():
  print('Phone controls configured; previous tile list and brightness recorded.')
 else:print('Phone controls already configured; user preferences retained.')
 
+# Lepton omits LineageParts. Android Display settings crashes while inflating
+# its LiveDisplay preference. Hide only that unsupported page in this private
+# tablet; text size and brightness remain available on the VR phone itself.
+parts=subprocess.run(['podman','exec','lepton-magicshelf-phone','/system/bin/pm','path','org.lineageos.lineageparts'],text=True,capture_output=True,timeout=15)
+if parts.returncode not in (0,1):raise RuntimeError(parts.stderr.strip() or 'Could not inspect Android display support')
+if not parts.stdout.strip():
+ component='com.android.settings/.Settings$DisplaySettingsActivity'
+ display_stamp=base/'phone-display-compatibility.json'
+ if not display_stamp.exists():
+  android('pm','disable','--user','0',component)
+  display_stamp.write_text(json.dumps({'component':component,'reason':'missing-lineageparts','restore_command':'pm default-state --user 0 '+component})+'\n')
+  print('Unsupported Android Display page hidden; use Text size on the phone.')
+
 # The Lepton display has no DisplayPowerController: touching Android's stock
 # slider crashes SystemUI. Use the slider on the phone's own settings screen.
 slider_stamp=base/'phone-brightness-provisioned.json'

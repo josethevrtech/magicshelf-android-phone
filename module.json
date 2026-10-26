@@ -2,7 +2,7 @@
   "schema_version": 1,
   "api_version": 2,
   "id": "org.magicshelf.android-phone",
-  "version": "0.2.6",
+  "version": "0.2.9",
   "name": "Android Phone (Virtual)",
   "description": "A virtual Android phone, right beside you in VR.",
   "author": "josethevrtech",
