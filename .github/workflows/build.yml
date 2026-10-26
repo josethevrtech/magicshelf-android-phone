@@ -66,6 +66,29 @@ jobs:
           meta=json.loads(pathlib.Path('dist/catalog.json').read_text())['modules'][0]
           assert tag == 'v'+meta['version'], 'Requested version must match the built creation'
           CHECK
+          # A tested on-device package may already have been published manually.
+          # Repeated tag/dispatch jobs must validate it without replacing its bytes.
+          if [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft' 2>/dev/null)" = false ]; then
+            mkdir published
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir published --pattern catalog.json --pattern SHA256SUMS --pattern '*.magicshelf'
+            python3 - "$TAG" <<'VERIFY'
+          import hashlib,json,pathlib,sys
+          expected=json.loads(pathlib.Path('dist/catalog.json').read_text())['modules'][0]
+          root=pathlib.Path('published')
+          item=json.loads((root/'catalog.json').read_text())['modules'][0]
+          assert sys.argv[1]=='v'+item['version'], 'Published version does not match tag'
+          for field in ('id','architecture','api_version','permissions'):
+              assert item[field]==expected[field], 'Published metadata differs: '+field
+          name=item['url'].rsplit('/',1)[-1]
+          archive=root/name
+          assert archive.stat().st_size==item['size_bytes'], 'Published size mismatch'
+          digest=hashlib.sha256(archive.read_bytes()).hexdigest()
+          assert digest==item['sha256'], 'Published checksum mismatch'
+          assert (digest+'  '+name) in (root/'SHA256SUMS').read_text().splitlines(), 'Checksum list mismatch'
+          print('Published release is complete; preserving its verified immutable assets.')
+          VERIFY
+            exit 0
+          fi
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Android Phone (Virtual) $TAG" --notes "Guided setup for MagicShelf on Steam Frame. Requires MagicShelf 0.3.8 or newer. Existing subscriptions and saved data are preserved."
           gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY"
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
