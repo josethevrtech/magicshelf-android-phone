@@ -32,4 +32,8 @@ class PreparationTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):prepare.prepare()
             self.assertTrue((cache/'lepton/old').exists())
 
-if __name__=='__main__':unittest.main()
+if __name__=='__main__':
+    # The existing release workflow invokes this file directly. Include display
+    # regressions there as well as in normal unittest discovery.
+    from test_display_controls import TextSizeTests, DisplayCompatibilityTests
+    unittest.main()
