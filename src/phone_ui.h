@@ -2,18 +2,19 @@
 #include "render.h"
 
 enum class PhoneAction { NoAction, Back, Room, Hand, Recenter, Smaller, Larger,
-                         TurnLeft, TurnRight, Keyboard, Hide, Reset, Dimmer, Brighter, Home, BrightnessSlider, Dock, FontSettings, FontSmaller, FontLarger, FontReset };
+                         TurnLeft, TurnRight, Keyboard, Hide, Reset, Dimmer, Brighter, Home, BrightnessSlider, Dock, FontSettings, FontSmaller, FontLarger, FontReset, Apps, Browser, FDroid, Aurora, Spotify, AppleMusic, YouTubeMusic, YouTube, Music, Video, Podcasts, Radio, RetryApps, WebApps, Gmail, Maps, Drive, GoogleCalendar };
 struct PhoneButton {
  int x,y,w,h; PhoneAction action; const char* label;
  bool contains(int px,int py)const{return px>=x&&px<x+w&&py>=y&&py<y+h;}
 };
 // These rectangles use the same 480 x 1046 coordinates as the live game.
-const std::array<PhoneButton,15> phoneButtons{{
+const std::array<PhoneButton,16> phoneButtons{{
  {24,112,AndroidOnly?208:432,72,PhoneAction::Back,AndroidOnly?"Resume app":"Back to pet"},
 #ifdef ANDROID_PHONE
  {248,112,208,72,PhoneAction::Home,"Home screen"},
 #endif
- {24,202,432,66,PhoneAction::FontSettings,"Text size"},
+ {24,202,208,66,PhoneAction::FontSettings,"Text size"},
+ {248,202,208,66,PhoneAction::Apps,"Apps & media"},
  {24,310,208,80,PhoneAction::Room,"In the room"},
  {248,310,208,80,PhoneAction::Hand,"Left wrist"},
  {24,406,208,72,PhoneAction::Dock,"Return to dock"},
@@ -69,9 +70,11 @@ void drawPhoneSettings(Canvas&c,bool wrist,float size,bool connected,bool protec
  c.fill(.035,.048,.065);
  c.text(24,33,AndroidOnly?AppTitle:"DIGITAL PARTNER",19,.96,.57,.19);
  c.text(24,85,"Device settings",43);
- rounded(c,24,202,432,66,12,.075,.105,.13);
- c.text(40,229,connected?(AndroidOnly?"Android keeps running":"Your pet keeps running"):(AndroidOnly?"Connecting to Android...":"Connecting to your pet..."),23,.81,.9,.94);
- c.text(40,253,AndroidOnly?"Point + stick: scroll  ·  press: click":(protectedCare?"No-death on  ·  Music off":"Music off"),19,.58,.71,.76);
+ if(!AndroidOnly){
+  rounded(c,24,202,432,66,12,.075,.105,.13);
+  c.text(40,229,connected?"Your pet keeps running":"Connecting to your pet...",23,.81,.9,.94);
+  c.text(40,253,protectedCare?"No-death on  ·  Music off":"Music off",19,.58,.71,.76);
+ }
  c.text(24,296,"PLACEMENT",19,.58,.68,.73);
  c.text(24,520,"PHONE SIZE",19,.58,.68,.73);
  c.text(356,520,std::to_string((int)std::round(size*100))+"%",23,.96,.62,.29);
@@ -96,4 +99,60 @@ void drawPhoneSettings(Canvas&c,bool wrist,float size,bool connected,bool protec
   centered(c,b,reset?22:(b.action==PhoneAction::Dock?24:26),back?.07:.91,back?.08:.95,back?.09:.97);
  }
  c.text(31,1017,AndroidOnly?"Bottom bezel button: settings":"Center button: settings",23,.58,.68,.73);
+}
+
+const std::array<PhoneButton,14> appButtons{{
+ {24,112,432,64,PhoneAction::Back,"Back to device settings"},
+ {24,214,208,68,PhoneAction::Browser,"Web browser"},
+ {248,214,208,68,PhoneAction::FDroid,"F-Droid apps"},
+ {24,302,432,68,PhoneAction::Aurora,"Aurora Store · more apps"},
+ {24,410,208,68,PhoneAction::Spotify,"Spotify"},
+ {248,410,208,68,PhoneAction::AppleMusic,"Apple Music web"},
+ {24,498,208,68,PhoneAction::YouTubeMusic,"YouTube Music"},
+ {248,498,208,68,PhoneAction::YouTube,"NewPipe video"},
+ {24,606,208,68,PhoneAction::Music,"Local music"},
+ {248,606,208,68,PhoneAction::Video,"VLC video"},
+ {24,694,208,68,PhoneAction::Podcasts,"Podcasts"},
+ {248,694,208,68,PhoneAction::Radio,"Internet radio"},
+ {24,882,208,60,PhoneAction::RetryApps,"Check app setup"},
+ {248,882,208,60,PhoneAction::WebApps,"Google web apps"}
+}};
+PhoneAction appActionAt(int x,int y){for(const auto&b:appButtons)if(b.contains(x,y))return b.action;return PhoneAction::NoAction;}
+const char* phoneAppId(PhoneAction action){
+ switch(action){
+ case PhoneAction::Browser:return "browser";case PhoneAction::FDroid:return "fdroid";
+ case PhoneAction::Aurora:return "aurora";case PhoneAction::Spotify:return "spotify";
+ case PhoneAction::AppleMusic:return "apple_music";case PhoneAction::YouTubeMusic:return "youtube_music";
+ case PhoneAction::YouTube:return "youtube";case PhoneAction::Music:return "music";
+ case PhoneAction::Video:return "video";case PhoneAction::Podcasts:return "podcasts";
+ case PhoneAction::Radio:return "radio";case PhoneAction::Gmail:return "gmail";case PhoneAction::Maps:return "maps";case PhoneAction::Drive:return "drive";case PhoneAction::GoogleCalendar:return "google_calendar";default:return nullptr;
+ }
+}
+void drawPhoneApps(Canvas&c,int ready,int total){
+ c.fill(.035,.048,.065);c.text(24,33,"ANDROID PHONE",19,.96,.57,.19);c.text(24,85,"Apps & media",43);
+ c.text(24,202,"BROWSE & DISCOVER",18,.58,.71,.76);
+ c.text(24,398,"STREAMING SERVICES",18,.58,.71,.76);
+ c.text(24,594,"MUSIC, VIDEO & PODCASTS",18,.58,.71,.76);
+ for(const auto&b:appButtons){rounded(c,b.x,b.y,b.w,b.h,14,.09,.13,.17);centered(c,b,23,.91,.95,.97);}
+ c.text(24,804,"Streaming opens the app or its website.",21,.81,.9,.94);
+ c.text(24,838,"Sign-in needed. DRM video may not play.",21,.58,.71,.76);
+ c.text(24,979,"Starter setup: "+std::to_string(ready)+" / "+std::to_string(total),23,.96,.62,.29);
+ c.text(24,1017,"Downloads retry when the phone starts.",20,.58,.71,.76);
+}
+
+const std::array<PhoneButton,5> webButtons{{
+ {24,112,432,64,PhoneAction::Back,"Back to Apps & media"},
+ {24,250,432,80,PhoneAction::Gmail,"Gmail"},
+ {24,350,432,80,PhoneAction::Maps,"Google Maps"},
+ {24,450,432,80,PhoneAction::Drive,"Google Drive"},
+ {24,550,432,80,PhoneAction::GoogleCalendar,"Google Calendar"}
+}};
+PhoneAction webActionAt(int x,int y){for(const auto&b:webButtons)if(b.contains(x,y))return b.action;return PhoneAction::NoAction;}
+void drawPhoneWebApps(Canvas&c){
+ c.fill(.035,.048,.065);c.text(24,33,"ANDROID PHONE",19,.96,.57,.19);c.text(24,85,"Google web apps",39);
+ for(const auto&b:webButtons){rounded(c,b.x,b.y,b.w,b.h,14,.09,.13,.17);centered(c,b,25,.91,.95,.97);}
+ c.text(24,714,"Opens in your phone browser.",24,.81,.9,.94);
+ c.text(24,760,"Sign in on the service's own website.",22,.58,.71,.76);
+ c.text(24,835,"Google Play Services is not installed.",22,.58,.71,.76);
+ c.text(24,878,"Some mobile web features may differ.",22,.58,.71,.76);
 }

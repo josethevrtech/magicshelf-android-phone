@@ -27,6 +27,9 @@ if not phone:
     if not game.is_file(): raise SystemExit('Digital Partner game missing. Run tools/import_inputs.py first.')
     os.environ['MAGICSHELF_GAME_DIR']=str(game.parent)
 else:
+    sys.path.insert(0,str(package/'backend'))
+    from phone_urls import prepare_pipe
+    os.environ['MAGICSHELF_PHONE_URL_PIPE']=str(prepare_pipe(os.environ['XDG_RUNTIME_DIR']))
     subprocess.run([sys.executable,str(package/'backend/prepare_runtime.py')],check=True)
 children=[];stopping=False
 # Own process groups allow orderly cleanup before systemd's final cgroup sweep.

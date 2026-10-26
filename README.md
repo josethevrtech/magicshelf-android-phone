@@ -71,3 +71,64 @@ Android and user APKs retain their own licenses.
 
 Project source is MIT licensed. Valve's OpenVR headers retain their included
 license. All creations and subscriptions are free; artist support is optional.
+
+## Everyday phone and media (0.2.14)
+
+The phone prepares a curated starter set on first use: Notes, Calendar, Clock,
+Calculator, Files, Gallery, Music, Keyboard, VLC, AntennaPod, RadioDroid,
+NewPipe, FOSS Browser, Droid-ify and Aurora Store. This is about 214 MB of
+initial downloads. APK URLs, versions and SHA-256 digests are pinned in
+`backend/starter_apps.json`; binaries come directly from F-Droid over HTTPS
+and are checked before Android installs them. APKs are not redistributed in
+the creation package. Android checks package signatures on installation.
+
+Open the bottom bezel's **Device settings → Apps & media** for streaming
+shortcuts, the browser and stores. **Google web apps** opens Gmail, Maps,
+Drive and Calendar in the phone browser. These are websites, not GApps.
+Google Play Music has been replaced by YouTube Music. NewPipe is an independent
+video client; it does not provide Google account sign-in.
+
+The untouched home screen receives a utility grid and browser/music/video/store
+dock. Customized layouts are left alone, and the original launcher database is
+backed up before initial setup. The keyboard and browser receive initial defaults;
+subsequent starts retain user choices. The phone clock follows the headset time
+zone. External web links stay inside this creation through a private URL pipe
+and the browser's share target, rather than Lepton opening host Steam browser tabs.
+Unsupported non-web link schemes are not forwarded to other applications.
+
+Downloads run independently of phone readiness. Interrupted or failed installs
+retry on the next start or **Check app setup**. Successfully handled apps are
+never force-reinstalled or downgraded: uninstalling an app is respected. Use
+Droid-ify or Aurora for app discovery and updates; each store's normal setup,
+permissions and installation confirmations apply. MagicShelf continues to own
+creation On/Off, updates, rollback and removal. Saved Android apps and data keep
+the same creation ID and paths. The private emulated SD card is preserved across
+starts; existing media folders are never replaced by host-folder shortcuts.
+On the checked Frame, Download, Movies and Documents link to the headset's
+Downloads, Videos and Documents folders. Files receives its normal all-files
+permission so you can browse and play your media.
+
+### Compatibility and account limits
+
+This is Valve's minimal Android 11 Lepton runtime, not a certified mainstream
+Android phone. Google Play Services and the Play Store are not installed, and
+there is no supported Google-certified image configured here. Apps that need
+Play Integrity, missing system services or DRM may refuse to work. No device
+identity or integrity result is spoofed.
+
+On the checked Frame, F-Droid 2.0.2 and 1.23.2 crashed because Lepton omits the
+clipboard service; Droid-ify 0.7.8 worked. Firefox/Fennec hit a native crash;
+FOSS Browser uses the already-installed system WebView and rendered YouTube.
+Apple Music 6.5.3 explicitly rejected the rooted runtime and was removed after
+testing; its web shortcut remains, with subscription playback unverified.
+Spotify 9.1.94.1929 installed from Google Play through Aurora and reached its
+login activity. Account sign-in, subscription playback, protected video and
+physical headset controls still require user testing. No user account was
+signed in and no subscription was purchased during setup.
+
+VLC decoded an original local H.264/AAC test clip and created an Android audio
+stream into PipeWire. This verifies the playback route, not perceived sound or
+latency in the headset. Radio and podcast apps launched; individual stations,
+feeds and NewPipe video extraction can change with their upstream services.
+Alarms and background media run only while the creation is On. Off stops Android
+and its audio; it is not an always-on physical phone.

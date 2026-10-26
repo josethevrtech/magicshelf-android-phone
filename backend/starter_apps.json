@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "apps": [
+    {
+      "package": "com.looker.droidify",
+      "label": "Droid-ify (F-Droid apps)",
+      "versionCode": 780,
+      "versionName": "0.7.8",
+      "sha256": "bb23d12e8b82a5cba906e61def49dc39c11468d2333633a72e107ca422e8f879",
+      "size": 5997579,
+      "url": "https://f-droid.org/repo/com.looker.droidify_780.apk",
+      "license": "GPL-3.0-or-later",
+      "source": "https://github.com/Droid-ify/client"
+    },
+    {
+      "package": "com.aurora.store",
+      "label": "Aurora Store",
+      "versionCode": 76,
+      "versionName": "4.8.4",
+      "sha256": "fd9c75d90d0f4a7c132b9b4a5a2cf1992a45e03b8d8ff988b7dcfbc0db2c4d11",
+      "size": 9360088,
+      "url": "https://f-droid.org/repo/com.aurora.store_76.apk",
+      "license": "GPL-3.0-or-later",
+      "source": "https://gitlab.com/AuroraOSS/AuroraStore"
+    },
+    {
+      "package": "org.fossify.notes",
+      "label": "Notes",
+      "versionCode": 13,
+      "versionName": "1.7.0",
+      "sha256": "5a56e0e39cc488e1f3b947d3801006d3b7450ec73c67f03195c64c5fd3b6bced",
+      "size": 9528948,
+      "url": "https://f-droid.org/repo/org.fossify.notes_13.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/FossifyOrg/Notes"
+    },
+    {
+      "package": "org.fossify.clock",
+      "label": "Clock",
+      "versionCode": 10,
+      "versionName": "1.6.0",
+      "sha256": "43cf9f0ec45f1f1ff2df47286622e5b8f3acedaeb07b7f7641b5243dbedca079",
+      "size": 9110265,
+      "url": "https://f-droid.org/repo/org.fossify.clock_10.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/FossifyOrg/Clock"
+    },
+    {
+      "package": "org.fossify.calendar",
+      "label": "Calendar",
+      "versionCode": 23,
+      "versionName": "1.12.0",
+      "sha256": "d43b2df05d5702bea760a7ab03402977ba72e446e5932038efbdab248a5de987",
+      "size": 8203041,
+      "url": "https://f-droid.org/repo/org.fossify.calendar_23.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/FossifyOrg/Calendar"
+    },
+    {
+      "package": "org.fossify.filemanager",
+      "label": "Files",
+      "versionCode": 14,
+      "versionName": "1.6.2",
+      "sha256": "c2993c75ea7287e7ede354b061d9c8772aa9b4b050e7660ec1ebc3592dc3d051",
+      "size": 10030982,
+      "url": "https://f-droid.org/repo/org.fossify.filemanager_14.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/FossifyOrg/File-Manager"
+    },
+    {
+      "package": "org.fossify.gallery",
+      "label": "Gallery",
+      "versionCode": 29,
+      "versionName": "1.14.0",
+      "sha256": "cfa321d7467b116741689f8f118b46011c882a4c2359b9320111f87c998af373",
+      "size": 38538363,
+      "url": "https://f-droid.org/repo/org.fossify.gallery_29.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/FossifyOrg/Gallery"
+    },
+    {
+      "package": "org.fossify.musicplayer",
+      "label": "Music",
+      "versionCode": 17,
+      "versionName": "1.8.4",
+      "sha256": "ddac49843267914b39c6340c2b050c0d6a597232d8586a34166cac34d095b1fc",
+      "size": 11147453,
+      "url": "https://f-droid.org/repo/org.fossify.musicplayer_17.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/FossifyOrg/Music-Player"
+    },
+    {
+      "package": "org.fossify.keyboard",
+      "label": "Keyboard",
+      "versionCode": 14,
+      "versionName": "1.9.1",
+      "sha256": "e326885c08b68212fd9fdda9be8a4fa492d5daba7ff37bb4ff4511826f40a8d0",
+      "size": 17098779,
+      "url": "https://f-droid.org/repo/org.fossify.keyboard_14.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/FossifyOrg/Keyboard"
+    },
+    {
+      "package": "org.videolan.vlc",
+      "label": "VLC",
+      "versionCode": 13070206,
+      "versionName": "3.7.2",
+      "sha256": "e748c3e0bb9ec447f3e49f71d5c73e0b48c2c0309faa7fb79806d3afb5601b66",
+      "size": 49645764,
+      "url": "https://f-droid.org/repo/org.videolan.vlc_13070206.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://code.videolan.org/videolan/vlc-android"
+    },
+    {
+      "package": "de.danoeh.antennapod",
+      "label": "Podcasts",
+      "versionCode": 3120395,
+      "versionName": "3.12.3",
+      "sha256": "6e79f28f69cef1a8b2e4f5f88c9c3cf3c3d7c51356f01394ac23b0dc5d56a00b",
+      "size": 17758020,
+      "url": "https://f-droid.org/repo/de.danoeh.antennapod_3120395.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/AntennaPod/AntennaPod"
+    },
+    {
+      "package": "net.programmierecke.radiodroid2",
+      "label": "Internet Radio",
+      "versionCode": 96,
+      "versionName": "0.86",
+      "sha256": "b13088ef0c3a9f12953f82b2a75e5c9d2fdb497dd69c6952240217f7315a779a",
+      "size": 10386877,
+      "url": "https://f-droid.org/repo/net.programmierecke.radiodroid2_96.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/segler-alex/RadioDroid"
+    },
+    {
+      "package": "de.baumann.browser",
+      "label": "Web browser",
+      "versionCode": 159,
+      "versionName": "24",
+      "sha256": "3cb274f869f777c8b420fd55a822eca72e11e22906161b07accd19b5c8be7b36",
+      "size": 3526260,
+      "url": "https://f-droid.org/repo/de.baumann.browser_159.apk",
+      "license": "GPL-3.0-or-later",
+      "source": "https://codeberg.org/Gaukler_Faun/FOSS_Browser"
+    },
+    {
+      "package": "com.darkempire78.opencalculator",
+      "label": "Calculator",
+      "versionCode": 53,
+      "versionName": "3.2.0",
+      "sha256": "2642613868a8a80f0ce963a4863bc153e7281b97b3bbdf36ca92a99dded7134a",
+      "size": 2359134,
+      "url": "https://f-droid.org/repo/com.darkempire78.opencalculator_53.apk",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/clementwzk/OpenCalc"
+    },
+    {
+      "package": "org.schabi.newpipe",
+      "label": "NewPipe video streams",
+      "versionCode": 1015,
+      "versionName": "0.29.1",
+      "sha256": "18447bfb1e06d113edc88df93f471827280de06f6f3d4dc42f56f28b9c1bab79",
+      "size": 11507122,
+      "url": "https://f-droid.org/repo/org.schabi.newpipe_1015_cb84069.apk",
+      "license": "GPL-3.0-or-later",
+      "source": "https://github.com/TeamNewPipe/NewPipe"
+    }
+  ]
+}
