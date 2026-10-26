@@ -32,7 +32,7 @@ jobs:
       - name: Verify release tag
         if: startsWith(github.ref, 'refs/tags/')
         run: python3 -c 'import json,os; v=json.load(open("module.json"))["version"]; assert os.environ["GITHUB_REF_NAME"] == "v"+v, "Tag must match creation version"'
-      - run: python3 tests/test_runtime_preparation.py
+      - run: python3 -m unittest discover -s tests -v
       - run: python3 tools/package.py
       - uses: actions/upload-artifact@v4
         with:
