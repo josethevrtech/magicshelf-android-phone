@@ -36,4 +36,5 @@ if __name__=='__main__':
     # The existing release workflow invokes this file directly. Include display
     # regressions there as well as in normal unittest discovery.
     from test_display_controls import TextSizeTests, DisplayCompatibilityTests
+    from test_starter_apps import StarterAppsTests, PhoneLinkTests, MediaPersistenceTests
     unittest.main()

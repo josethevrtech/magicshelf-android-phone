@@ -24,7 +24,17 @@ if not (base/'initialized').exists():
         if 'Success' not in r.stdout:raise RuntimeError(r.stdout+r.stderr)
         android('rm -f /data/local/tmp/F-Droid.apk')
     (base/'initialized').write_text('Lineage tablet initialized\n')
-android('input keyevent KEYCODE_HOME')
+# Match the headset clock without changing its system timezone.
+zone=os.environ.get('TABLET_TIMEZONE')
+if not zone:
+    resolved=str(pathlib.Path('/etc/localtime').resolve())
+    zone=resolved.split('/zoneinfo/',1)[-1] if '/zoneinfo/' in resolved else 'UTC'
+android('setprop persist.sys.timezone '+__import__('shlex').quote(zone))
+android('am broadcast -a android.intent.action.TIMEZONE_CHANGED --es time-zone '+__import__('shlex').quote(zone))
+android('am start -a android.intent.action.MAIN -c android.intent.category.HOME -p com.android.launcher3')
 print('Persistent Android tablet ready',flush=True)
 
 subprocess.run(["python3",str(pathlib.Path(__file__).resolve().parent/"provision_controls.py")],check=True)
+
+# Downloads are independent of phone readiness and retry safely next start.
+subprocess.run(['python3', str(pathlib.Path(__file__).resolve().parent/'provision_apps.py')], check=True)

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Local control for the VR phone. No network listener or Android debug port."""
-import json,os,pathlib,selectors,socket,subprocess,time,struct
+import json,os,pathlib,selectors,socket,subprocess,time,struct,sys
+from app_launch import launch
+from phone_urls import route, Lines
 from display_controls import font_scale
 base=pathlib.Path(os.environ['MAGICSHELF_DATA_DIR'])
 vr=pathlib.Path(os.environ['MAGICSHELF_DATA_DIR'])
@@ -19,7 +21,8 @@ def publish(value,scale=1.):
 endpoint.unlink(missing_ok=True);state.unlink(missing_ok=True)
 sock=socket.socket(socket.AF_UNIX,socket.SOCK_DGRAM);sock.bind(str(endpoint));os.chmod(endpoint,0o600);sock.setblocking(False)
 select=selectors.DefaultSelector();select.register(sock,selectors.EVENT_READ)
-previous=None;container_pid=0;next_poll=0;last_error=''
+url_fd=os.open(os.environ['MAGICSHELF_PHONE_URL_PIPE'],os.O_RDWR|os.O_NONBLOCK);url_lines=Lines();select.register(url_fd,selectors.EVENT_READ)
+previous=None;container_pid=0;next_poll=0;last_error='';app_installer=None
 def keyevent(code):
  fd=os.open(f'/proc/{container_pid}/root/dev/input/wl_keyboard_events',os.O_WRONLY|os.O_NONBLOCK)
  try:
@@ -30,9 +33,15 @@ def keyevent(code):
  finally:os.close(fd)
 try:
  while True:
-  for _,_ in select.select(max(0,min(1,next_poll-time.monotonic()))):
+  for event,_ in select.select(max(0,min(1,next_poll-time.monotonic()))):
    try:
-    message=json.loads(sock.recv(4096));operation=message.get('op')
+    if event.fd==url_fd:
+     for command in url_lines.feed(os.read(url_fd,8192)):
+      route(command,android)
+     continue
+    message=json.loads(sock.recv(4096))
+    if not isinstance(message,dict):raise ValueError('Invalid phone command')
+    operation=message.get('op')
     if operation=='brightness':
      level=max(.25,min(1,float(message['value'])));value=round((level-.25)/.75*255)
      android(f'settings put system screen_brightness_mode 0; settings put system screen_brightness {value}')
@@ -40,6 +49,11 @@ try:
     elif operation=='font_scale':
      scale=font_scale(message['value']);android(f'settings put system font_scale {scale}')
      previous=None;next_poll=0
+    elif operation=='open_app':
+     print(launch(message['app'],android),flush=True)
+    elif operation=='retry_apps':
+     if app_installer is None or app_installer.poll() is not None:
+      app_installer=subprocess.Popen([sys.executable,str(pathlib.Path(__file__).with_name('provision_apps.py'))])
     elif operation=='home':
      android('cmd statusbar collapse; am start -a android.intent.action.MAIN -c android.intent.category.HOME -f 0x10200000 -n com.android.launcher3/.uioverrides.QuickstepLauncher')
      print('Home screen opened',flush=True)
@@ -58,4 +72,9 @@ try:
     if str(e)!=last_error:print('Waiting for Android:',e,flush=True);last_error=str(e)
    next_poll=time.monotonic()+.75
 finally:
+ if app_installer is not None and app_installer.poll() is None:
+  app_installer.terminate()
+  try:app_installer.wait(timeout=5)
+  except subprocess.TimeoutExpired:app_installer.kill();app_installer.wait()
+ os.close(url_fd)
  sock.close();endpoint.unlink(missing_ok=True);state.unlink(missing_ok=True)

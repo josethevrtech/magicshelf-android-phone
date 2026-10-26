@@ -36,10 +36,37 @@ def build(source, runtime):
     patch('liblepton/mounting.sh',
           'function setup_podman_base()\n{',
           'function setup_podman_base()\n{\n    podman_cmdline --memory=2g --memory-swap=2304m')
+    # This creation consumes intercepted URLs rather than opening host Steam tabs.
+    patch('liblepton/mounting.sh',
+          'podman_mount_entry "${HOME}/.steam/steam.pipe" "/lepton/steam.pipe" rw',
+          'podman_mount_entry "${MAGICSHELF_PHONE_URL_PIPE}" "/lepton/steam.pipe" rw')
+    preserve_media(runtime)
     patch('liblepton/networking.sh', '    if [[ "${LEPTON_NO_PORT_FORWARDING:-false}" != "false" ]]; then\n        PODMAN_NETWORK_OPTIONS+=" -t $(adb_port) -t $(lldb_port) -t $(gdb_port)"\n    else\n        PODMAN_NETWORK_OPTIONS+=" -t auto"\n        PODMAN_NETWORK_OPTIONS+=" -u auto"\n    fi', '    # Local tablet control uses podman exec, not network debugging.\n    PODMAN_NETWORK_OPTIONS+=" -t none -u none"')
     patch('liblepton/properties.sh',
           'local TIMEZONE_STR="$(readlink /etc/localtime)"',
           'local TIMEZONE_STR="${TABLET_TIMEZONE:-UTC}"')
+
+
+def preserve_media(runtime):
+    """A persistent phone must not clear its emulated SD card at each boot."""
+    path=runtime/'liblepton/mounting.sh'
+    text=path.read_text()
+    replacements=[('        rm -rf "$(data_mount_path)/media/0"',
+                   '        mkdir -p "$(data_mount_path)/media/0"')]
+    for host,phone in [('Documents','Documents'),('Downloads','Download'),('Videos','Movies')]:
+        old=(f'        if [[ -d "${{HOME}}/{host}" ]]; then\n'
+             f'            rm -rf "${{TARGET_PATH}}/{phone}"\n'
+             f'            ln -s "${{HOME}}/{host}" "${{TARGET_PATH}}/{phone}"\n'
+             '        fi')
+        new=(f'        if [[ -d "${{HOME}}/{host}" && ! -e "${{TARGET_PATH}}/{phone}" && ! -L "${{TARGET_PATH}}/{phone}" ]]; then\n'
+             f'            ln -s "${{HOME}}/{host}" "${{TARGET_PATH}}/{phone}"\n'
+             '        fi')
+        replacements.append((old,new))
+    for old,new in replacements:
+        if text.count(old)!=1:
+            raise RuntimeError('Android media setup changed. Update Android Phone, then try again.')
+        text=text.replace(old,new)
+    path.write_text(text)
 
 
 def prepare():
@@ -52,7 +79,7 @@ def prepare():
         if not (source/'lepton').is_file():
             raise RuntimeError('Android support is not installed yet. Open this creation in MagicShelf and choose Set up.')
         digest=hashlib.sha256((source/'lepton').read_bytes()).hexdigest()
-        expected={'upstream_launcher_sha256':digest,'version':(source/'version.txt').read_text().strip(),'tablet_schema':2}
+        expected={'upstream_launcher_sha256':digest,'version':(source/'version.txt').read_text().strip(),'tablet_schema':5}
         try:
             saved=json.loads(stamp.read_text())
             if runtime.is_dir() and all(saved.get(k)==v for k,v in expected.items()):

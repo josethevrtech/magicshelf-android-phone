@@ -51,7 +51,13 @@ int main(){
  assert(!onPhoneBody({BodyX+.01f,0,ScreenZ}));
  M malformed=identity();malformed[0]=2;assert(!validRoomPose(malformed));
  malformed=identity();malformed[3]=.5;assert(!validRoomPose(malformed));
- assert(phoneActionAt(240,260)==PhoneAction::FontSettings);
+ assert(phoneActionAt(120,260)==PhoneAction::FontSettings);
+ assert(phoneActionAt(350,240)==PhoneAction::Apps);
+ assert(appActionAt(120,440)==PhoneAction::Spotify);
+ assert(appActionAt(350,440)==PhoneAction::AppleMusic);
+ assert(appActionAt(120,911)==PhoneAction::RetryApps);
+ assert(std::string(phoneAppId(PhoneAction::Music))=="music");
+ assert(phoneAppId(PhoneAction::Back)==nullptr);
  assert(fontActionAt(120,440)==PhoneAction::FontSmaller);
  assert(fontActionAt(350,440)==PhoneAction::FontLarger);
  assert(fontActionAt(240,570)==PhoneAction::FontReset);

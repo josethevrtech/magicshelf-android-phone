@@ -77,11 +77,11 @@ int main(int argc,char**argv){try{
  std::unique_ptr<Capture>androidCapture;std::unique_ptr<AndroidTouch>androidInput;uint32_t androidNode=0;uint64_t androidUploaded=0;double androidStarted=0;
  auto lastUI=lastSource;auto lastSettingsTap=lastSource;
  auto lastControlsPoll=lastSource,lastBrightnessCommand=lastSource,lastNavigation=std::chrono::steady_clock::now();double controlsRevision=0;
- float fontScale=1.f;bool textSettings=false;bool gripHeld=false;
+ float fontScale=1.f;bool textSettings=false,appsSettings=false,webSettings=false;bool gripHeld=false;
  bool pointerOnScreen=false,pointerOnHandle=false,queuedClick=false,brightnessDragging=false;VREvent_t lastPointer{};
  uint32_t pointerController=k_unTrackedDeviceIndexInvalid;int pointerX=0,pointerY=0;
  auto finishBrightness=[&](){if(!brightnessDragging)return;brightnessDragging=false;lastBrightnessCommand=std::chrono::steady_clock::now();save();androidCommand("{\"op\":\"brightness\",\"value\":"+std::to_string(brightness)+"}");};
- auto toggleSettings=[&](bool open){closeKeyboard();finishBrightness();if(androidInput)androidInput->end();settingsOpen=open;textSettings=false;dirty=true;if(!open){uploaded=0;androidUploaded=0;}};
+ auto toggleSettings=[&](bool open){closeKeyboard();finishBrightness();if(androidInput)androidInput->end();settingsOpen=open;textSettings=false;appsSettings=false;webSettings=false;dirty=true;if(!open){uploaded=0;androidUploaded=0;}};
  auto openFromLauncher=[&](){docked=false;visible=true;toggleSettings(true);recallRequested=true;};
  auto returnToDock=[&](const char*reason="command"){
   startupPlacement=true;placementStarted=std::chrono::steady_clock::now();
@@ -180,15 +180,18 @@ int main(int argc,char**argv){try{
     auto pixel=settingsOpen?screenPixel(hit,SettingsWidth,SettingsHeight):screenPixel(hit);int x=pixel[0],y=pixel[1];
     if(settingsOpen){
      // Brightness belongs to the VR screen; Android has no hardware backlight.
-     if(AndroidOnly&&(brightnessDragging||(down&&phoneActionAt(x,y)==PhoneAction::BrightnessSlider))){
+     if(AndroidOnly&&!textSettings&&!appsSettings&&(brightnessDragging||(down&&phoneActionAt(x,y)==PhoneAction::BrightnessSlider))){
       brightnessDragging=true;brightness=phoneBrightnessAt(x);dirty=true;lastBrightnessCommand=now;
       if(simulatedClick)finishBrightness();continue;
      }
      // Consume every screen event here; none may leak through to the game.
      if(down&&now-lastSettingsTap>=std::chrono::milliseconds(180)){
-      lastSettingsTap=now;PhoneAction action=textSettings?fontActionAt(x,y):phoneActionAt(x,y);
+      lastSettingsTap=now;PhoneAction action=webSettings?webActionAt(x,y):(appsSettings?appActionAt(x,y):(textSettings?fontActionAt(x,y):phoneActionAt(x,y)));
       switch(action){
-       case PhoneAction::Back:if(textSettings)textSettings=false;else toggleSettings(false);break;
+       case PhoneAction::Back:if(webSettings)webSettings=false;else if(textSettings||appsSettings){textSettings=false;appsSettings=false;}else toggleSettings(false);break;
+       case PhoneAction::Apps:appsSettings=true;break;
+       case PhoneAction::WebApps:webSettings=true;break;
+       case PhoneAction::RetryApps:androidCommand("{\"op\":\"retry_apps\"}");break;
        case PhoneAction::FontSettings:textSettings=true;break;
        case PhoneAction::FontSmaller:fontScale=std::max(.85f,fontScale-.05f);break;
        case PhoneAction::FontLarger:fontScale=std::min(1.5f,fontScale+.05f);break;
@@ -209,7 +212,7 @@ int main(int argc,char**argv){try{
        case PhoneAction::Hide:visible=false;grab.end();toggleSettings(false);break;
        case PhoneAction::Reset:yaw=0;size=DefaultSize;returnToDock("position and size reset");break;
        case PhoneAction::BrightnessSlider:break;
-       case PhoneAction::NoAction:break;
+       default:if(auto id=phoneAppId(action)){androidCommand(std::string("{\"op\":\"open_app\",\"app\":\"")+id+"\"}");toggleSettings(false);}break;
       }
       if(action!=PhoneAction::NoAction){
        if(action==PhoneAction::FontSmaller||action==PhoneAction::FontLarger||action==PhoneAction::FontReset)androidCommand("{\"op\":\"font_scale\",\"value\":"+std::to_string(fontScale)+"}");
@@ -257,9 +260,9 @@ int main(int argc,char**argv){try{
   }
   if(!visible||!poses[0].bPoseIsValid||(docked&&!dock.available)){finishBrightness();if(androidInput)androidInput->end();}
   if(androidOpen&&!androidHasFrame&&!settingsOpen&&dirty){ui.fill(.035,.048,.065);ui.text(30,480,"Starting Android...",33);ui.text(30,530,AndroidOnly?"Bottom bezel button: settings":"Center button: settings",23);renderer.screen(ui);dirty=false;}
-  if(settingsOpen&&(dirty||now-lastUI>std::chrono::seconds(30))){
+  if(settingsOpen&&(dirty||now-lastUI>std::chrono::seconds(appsSettings?2:30))){
    auto*care=json_object_from_file((base+"/care-mode.json").c_str());bool protectedCare=readstr(care,"mode")=="no-death";if(care)json_object_put(care);
-   if(textSettings)drawPhoneTextSettings(ui,fontScale);else drawPhoneSettings(ui,wrist,size,AndroidOnly?androidHasFrame:hasFrame,protectedCare,brightness,docked);renderer.screen(ui);dirty=false;lastUI=now;
+   if(webSettings)drawPhoneWebApps(ui);else if(appsSettings){auto*progress=json_object_from_file((base+"/starter-apps-progress.json").c_str());int ready=readnum(progress,"ready",0),total=readnum(progress,"total",15);if(progress)json_object_put(progress);drawPhoneApps(ui,ready,total);}else if(textSettings)drawPhoneTextSettings(ui,fontScale);else drawPhoneSettings(ui,wrist,size,AndroidOnly?androidHasFrame:hasFrame,protectedCare,brightness,docked);renderer.screen(ui);dirty=false;lastUI=now;
   }
   if(grab.active){
    M hand=fromvr(poses[grab.controller].mDeviceToAbsoluteTracking);
