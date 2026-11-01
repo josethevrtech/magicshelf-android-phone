@@ -1,0 +1,9 @@
+{
+  "name": "Experimental Android tablet",
+  "screen": [
+    960,
+    1280
+  ],
+  "source": "Original Android Phone geometry, widened 5/3",
+  "triangles": 1520
+}

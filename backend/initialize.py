@@ -10,7 +10,8 @@ for _ in range(120):
 else:raise RuntimeError('Android did not finish booting')
 android('setprop persist.sys.pcmode.enabled false; setprop persist.waydroid.multi_windows false')
 # Keep approximately 360 dp of width after increasing the physical capture.
-android('wm size reset; wm density 320; settings put system accelerometer_rotation 0; settings put system user_rotation 0')
+density=240 if os.environ.get('MAGICSHELF_PHONE_TABLET')=='1' else 320
+android(f'wm size reset; wm density {density}; settings put system accelerometer_rotation 0; settings put system user_rotation 0')
 # Lepton boots as a game runtime rather than completing a tablet setup wizard.
 # Home navigation and night mode require a completed Android user setup.
 android('settings put global device_provisioned 1; settings put secure user_setup_complete 1; cmd uimode night yes')

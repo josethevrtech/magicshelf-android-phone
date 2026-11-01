@@ -1,7 +1,7 @@
 {
   "controller_type": "frame_controller",
   "name": "Android Phone (Virtual)",
-  "description": "While pointing at the phone: thumbstick scrolls, press stick or A to click, B goes back, Y opens Home.",
+  "description": "Point at the screen: stick scrolls; hold stick and move up/down to pinch; trigger or A/X taps. B goes back; Y opens Home. Grip picks up; holding-hand stick+press changes depth; free-hand stick still scrolls.",
   "bindings": {
     "/actions/phone": {
       "sources": [
@@ -13,7 +13,7 @@
               "output": "/actions/phone/in/scroll"
             },
             "click": {
-              "output": "/actions/phone/in/click"
+              "output": "/actions/phone/in/pinch"
             }
           }
         },
@@ -25,7 +25,7 @@
               "output": "/actions/phone/in/scroll"
             },
             "click": {
-              "output": "/actions/phone/in/click"
+              "output": "/actions/phone/in/pinch"
             }
           }
         },
@@ -48,7 +48,7 @@
           }
         },
         {
-          "path": "/user/hand/right/input/y",
+          "path": "/user/hand/left/input/y",
           "mode": "button",
           "inputs": {
             "click": {
@@ -71,6 +71,15 @@
           "inputs": {
             "click": {
               "output": "/actions/phone/in/grip"
+            }
+          }
+        },
+        {
+          "path": "/user/hand/left/input/x",
+          "mode": "button",
+          "inputs": {
+            "click": {
+              "output": "/actions/phone/in/click"
             }
           }
         }

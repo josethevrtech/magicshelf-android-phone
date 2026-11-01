@@ -30,6 +30,11 @@
       "name": "/actions/phone/in/grip",
       "type": "boolean",
       "requirement": "optional"
+    },
+    {
+      "name": "/actions/phone/in/pinch",
+      "type": "boolean",
+      "requirement": "optional"
     }
   ],
   "action_sets": [
@@ -46,7 +51,8 @@
       "/actions/phone/in/click": "Click at pointer",
       "/actions/phone/in/back": "Back",
       "/actions/phone/in/home": "Home screen",
-      "/actions/phone/in/grip": "Hold grip to pick up; release to place"
+      "/actions/phone/in/grip": "Hold grip to pick up; release to place",
+      "/actions/phone/in/pinch": "Hold stick + move up/down: pinch; while holding phone: adjust depth"
     }
   ]
 }

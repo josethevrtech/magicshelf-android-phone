@@ -132,3 +132,54 @@ latency in the headset. Radio and podcast apps launched; individual stations,
 feeds and NewPipe video extraction can change with their upstream services.
 Alarms and background media run only while the creation is On. Off stops Android
 and its audio; it is not an always-on physical phone.
+
+## Reviewer controls candidate (unpublished)
+
+The default Steam Frame bindings are now explained on first use and in
+**Device settings → Controls & display**:
+
+- Point at the screen. The phone supplies a small pointer ring when needed.
+  Trigger or A/X taps; the thumbstick scrolls vertically or horizontally.
+- Press and hold the pointing hand's stick, then move it up/down to send a real
+  two-contact pinch. Release the stick to lift both fingers. Apps must support
+  pinch; this does not inject mouse-wheel or desktop zoom shortcuts.
+- Grip picks up the housing. While holding, the free hand can still point,
+  scroll and pinch. Holding-hand stick **plus press** changes pickup depth;
+  ordinary scrolling is no longer automatically turned into depth adjustment.
+- B goes Back; Y on the left controller opens Home. Release the stick to neutral
+  after changing focus/hand so an existing deflection cannot leak into the phone.
+  Default bindings can be reviewed in SteamVR; customized bindings may need the
+  new Pinch action assigned.
+
+**Wrist fit** offers left/right attachment with separate saved offsets, tilt,
+roll, turn and scale. Changes preview on the selected tracked controller; reset
+only resets that wrist's fit. Missing tracking retains the last valid pose or
+uses the room fallback. Actual comfort and controller aim still need headset
+review.
+
+**Hide phone** now explains that Android and audio keep running, offers Return
+to shelf, and requires an explicit Hide confirmation. Reopen through MagicShelf's
+**Show creation** (or Configure on older hosts). Show restores visibility using
+`--show` without restarting Android; use MagicShelf Off to stop Android/audio.
+
+**Phone / tablet display** is an experimental startup choice. Tablet uses a wider
+original shell, a 960 × 1280 Android surface and 240 dpi (640 dp wide); choose it,
+then use MagicShelf Off/On to apply. Phone restores 720 × 1600 at 320 dpi. Both
+share the same creation ID, apps and saves. This is the existing Android 11
+Lepton runtime, not Android 17 or an OS upgrade. Some apps retain phone layouts
+or reject this runtime regardless of display size. Native settings retain the
+phone control layout in the wider prototype.
+
+Docked size fits both object height and actual mesh width with a gap, including
+12 cm slots. The fitted pose and scale also drive hit testing; free-held size
+and the user's shelf spacing are unchanged.
+
+Validation includes event-pipe tests for two contact IDs, positions, lift order,
+timeout/disconnect cancellation, focus-neutral gating and depth ownership;
+phone/tablet ray and actual-mesh-bound tests; wrist serialization; and display
+selection regressions. On Frame, a WebView received two contacts with a 2.95x
+change in span and zero remaining contacts after release; a scroll test moved
+362 CSS pixels. Tablet boot, app persistence, separate wrist profiles and
+hide/Show without shell or Android PID changes were checked. Physical controller
+bindings, dashboard-open/closed use while docked/held/wrist, wrist comfort and
+per-app zoom behavior still require headset feedback before publication.
