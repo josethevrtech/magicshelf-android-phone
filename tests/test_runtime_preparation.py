@@ -37,4 +37,5 @@ if __name__=='__main__':
     # regressions there as well as in normal unittest discovery.
     from test_display_controls import TextSizeTests, DisplayCompatibilityTests
     from test_starter_apps import StarterAppsTests, PhoneLinkTests, MediaPersistenceTests
+    from test_display_profile import DisplayProfileTests
     unittest.main()

@@ -20,8 +20,8 @@ mkdir -p build/tests build/runtime/assets/input
 flags=(-O2 -std=c++17 -pthread -Isrc -I"$sdk/native/compat" -I"$sdk/native"
   '-DMAGICSHELF_CREATION_PROFILE="creation_profile.h"')
 flags+=(-DANDROID_PHONE)
-for name in math_test dock_math_test dock_config_test pet_text_input_test; do
-  c++ "${flags[@]}" "tests/$name.cpp" -o "build/tests/$name" $(pkg-config --cflags --libs egl glesv2 cairo json-c)
+for name in math_test dock_math_test dock_config_test pet_text_input_test android_touch_test; do
+  c++ "${flags[@]}" "tests/$name.cpp" -o "build/tests/$name" $(pkg-config --cflags --libs egl glesv2 cairo json-c x11 xtst)
   "build/tests/$name"
 done
 c++ "${flags[@]}" src/main.cpp -o build/runtime/android-phone-vr   -L"$vr" -lopenvr_api -Wl,-rpath,/opt/steamvr/bin/"$platform"   $(pkg-config --cflags --libs egl glesv2 cairo json-c libpipewire-0.3 x11 xtst)
@@ -33,3 +33,8 @@ if [[ "${MAGICSHELF_SKIP_MODEL:-0}" == 1 ]]; then
 else
   python3 tools/generate_model.py
 fi
+
+python3 tools/generate_tablet.py
+
+# Re-run geometry with the wider startup profile, including minimum shelf spacing.
+MAGICSHELF_PHONE_TABLET=1 build/tests/math_test

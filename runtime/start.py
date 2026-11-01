@@ -5,6 +5,10 @@ package=pathlib.Path(__file__).resolve().parents[1]
 meta=json.loads((package/'module.json').read_text())
 data=pathlib.Path(os.environ['MAGICSHELF_DATA_DIR']);data.mkdir(parents=True,exist_ok=True)
 phone=meta['id']=='org.magicshelf.android-phone'
+sys.path.insert(0,str(package/'backend'))
+from display_profile import display_profile
+display=display_profile(data/'android-settings.json') if phone else (480,1046,320)
+os.environ['MAGICSHELF_PHONE_TABLET']='1' if display[0]==960 else '0'
 inputs=pathlib.Path.home()/'.local/share/magicshelf/creation-inputs'/meta['id']
 assets=data/'assets';assets.mkdir(exist_ok=True)
 # Assets are read-only package/dependency content, never mutable save data.
@@ -42,7 +46,7 @@ signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
 try:
     env=dict(os.environ)
     for key in ('DISPLAY','WAYLAND_DISPLAY','GAMESCOPE_WAYLAND_DISPLAY'):env.pop(key,None)
-    width,height=(720,1600) if phone else (480,1046)
+    width,height=display[:2]
     backend=spawn(['/usr/bin/gamescope','--backend','headless','-W',str(width),'-H',str(height),'-w',str(width),'-h',str(height),'-r','30','--force-windows-fullscreen','--', '/bin/bash',str(package/'backend/run-session.sh')],env)
     shell=spawn([str(package/'bin/android-phone-vr')])
     if phone: spawn([sys.executable,str(package/'backend/phone_bridge.py')])

@@ -1,8 +1,9 @@
 #pragma once
 #include "render.h"
+#include "phone_controls.h"
 
 enum class PhoneAction { NoAction, Back, Room, Hand, Recenter, Smaller, Larger,
-                         TurnLeft, TurnRight, Keyboard, Hide, Reset, Dimmer, Brighter, Home, BrightnessSlider, Dock, FontSettings, FontSmaller, FontLarger, FontReset, Apps, Browser, FDroid, Aurora, Spotify, AppleMusic, YouTubeMusic, YouTube, Music, Video, Podcasts, Radio, RetryApps, WebApps, Gmail, Maps, Drive, GoogleCalendar };
+                         TurnLeft, TurnRight, Keyboard, Hide, Reset, Dimmer, Brighter, Home, BrightnessSlider, Dock, FontSettings, FontSmaller, FontLarger, FontReset, Apps, Browser, FDroid, Aurora, Spotify, AppleMusic, YouTubeMusic, YouTube, Music, Video, Podcasts, Radio, RetryApps, WebApps, Gmail, Maps, Drive, GoogleCalendar, Fit, Help, HelpDone, ConfirmHide, Display, DisplayPhone, DisplayTablet, LeftWrist, RightWrist, WristLeft, WristRight, WristDown, WristUp, WristNear, WristFar, WristTiltDown, WristTiltUp, WristRollLeft, WristRollRight, WristSmaller, WristLarger, WristReset, WristYawLeft, WristYawRight };
 struct PhoneButton {
  int x,y,w,h; PhoneAction action; const char* label;
  bool contains(int px,int py)const{return px>=x&&px<x+w&&py>=y&&py<y+h;}
@@ -16,8 +17,8 @@ const std::array<PhoneButton,16> phoneButtons{{
  {24,202,208,66,PhoneAction::FontSettings,"Text size"},
  {248,202,208,66,PhoneAction::Apps,"Apps & media"},
  {24,310,208,80,PhoneAction::Room,"In the room"},
- {248,310,208,80,PhoneAction::Hand,"Left wrist"},
- {24,406,208,72,PhoneAction::Dock,"Return to dock"},
+ {248,310,208,80,PhoneAction::Fit,"Wrist fit"},
+ {24,406,208,72,PhoneAction::Dock,"Return to shelf"},
  {248,406,208,72,PhoneAction::Recenter,"Bring closer"},
  {24,536,208,76,PhoneAction::Smaller,"−  Smaller"},
  {248,536,208,76,PhoneAction::Larger,"+  Larger"},
@@ -31,7 +32,7 @@ const std::array<PhoneButton,16> phoneButtons{{
 #endif
  {24,832,208,64,PhoneAction::Keyboard,"VR keyboard"},
  {248,832,208,64,PhoneAction::Hide,"Hide phone"},
- {24,914,432,58,PhoneAction::Reset,"Reset position & size"}
+ {24,914,432,58,PhoneAction::Help,"Controls & display"}
 }};
 float phoneBrightnessAt(int x){return .25f+.75f*std::clamp((x-48)/384.f,0.f,1.f);}
 PhoneAction phoneActionAt(int x,int y){
@@ -155,4 +156,41 @@ void drawPhoneWebApps(Canvas&c){
  c.text(24,760,"Sign in on the service's own website.",22,.58,.71,.76);
  c.text(24,835,"Google Play Services is not installed.",22,.58,.71,.76);
  c.text(24,878,"Some mobile web features may differ.",22,.58,.71,.76);
+}
+
+const std::array<PhoneButton,20> fitButtons{{
+ {24,112,432,64,PhoneAction::Back,"Back to device settings"},
+ {24,216,208,64,PhoneAction::LeftWrist,"Use left wrist"},{248,216,208,64,PhoneAction::RightWrist,"Use right wrist"},
+ {24,294,208,60,PhoneAction::WristLeft,"Move left"},{248,294,208,60,PhoneAction::WristRight,"Move right"},
+ {24,366,208,60,PhoneAction::WristDown,"Move down"},{248,366,208,60,PhoneAction::WristUp,"Move up"},
+ {24,438,208,60,PhoneAction::WristNear,"Move back"},{248,438,208,60,PhoneAction::WristFar,"Move forward"},
+ {24,510,208,60,PhoneAction::WristTiltDown,"Tilt down"},{248,510,208,60,PhoneAction::WristTiltUp,"Tilt up"},
+ {24,582,208,60,PhoneAction::WristRollLeft,"Roll left"},{248,582,208,60,PhoneAction::WristRollRight,"Roll right"},
+ {24,654,208,60,PhoneAction::WristYawLeft,"Turn left"},{248,654,208,60,PhoneAction::WristYawRight,"Turn right"},
+ {24,726,208,60,PhoneAction::WristSmaller,"Smaller"},{248,726,208,60,PhoneAction::WristLarger,"Larger"},
+ {24,814,432,64,PhoneAction::WristReset,"Reset this wrist fit"},
+ {24,882,208,60,PhoneAction::Room,"Use in room"},{248,882,208,60,PhoneAction::Dock,"Return to shelf"}
+}};
+PhoneAction extraActionAt(int page,int x,int y){
+ if(page==1){for(const auto&b:fitButtons)if(b.contains(x,y))return b.action;return PhoneAction::NoAction;}
+ if(x<24||x>=456)return PhoneAction::NoAction;
+ if(y>=112&&y<176)return PhoneAction::Back;
+ if(page==2){if(y>=700&&y<770)return PhoneAction::Fit;if(y>=790&&y<860)return PhoneAction::Display;if(y>=890&&y<960)return PhoneAction::HelpDone;}
+ if(page==3){if(y>=670&&y<740)return PhoneAction::Dock;if(y>=780&&y<850)return PhoneAction::ConfirmHide;}
+ if(page==4){if(y>=300&&y<380)return PhoneAction::DisplayPhone;if(y>=410&&y<490)return PhoneAction::DisplayTablet;}
+ return PhoneAction::NoAction;
+}
+void extraButton(Canvas&c,int y,int h,PhoneAction action,const char*label){PhoneButton b{24,y,432,h,action,label};rounded(c,b.x,b.y,b.w,b.h,14,.09,.13,.17);centered(c,b,24,.91,.95,.97);}
+void drawPhoneExtra(Canvas&c,int page,const WristConfig&fit,int hand,bool tabletNext,bool attached=false){
+ c.fill(.035,.048,.065);c.text(24,33,"ANDROID PHONE",19,.96,.57,.19);
+ c.text(24,85,page==1?"Wrist fit":page==3?"Hide phone?":page==4?"Display format":"Controls & help",39);
+ extraButton(c,112,64,PhoneAction::Back,"Back to device settings");
+ if(page==1){for(const auto&b:fitButtons){if(b.action==PhoneAction::Back)continue;rounded(c,b.x,b.y,b.w,b.h,14,.09,.13,.17);centered(c,b,23,.91,.95,.97);}c.text(24,985,std::string(hand?"Right":"Left")+" wrist · "+std::to_string((int)round(fit.scale*100))+(attached?"% · live preview":"% · saved fit"),22,.96,.62,.29);}
+ if(page==2){
+  const char*lines[]={"Point at the screen to interact.","Trigger or A / X: tap at the pointer.","Thumbstick: scroll up/down or sideways.","Hold stick + move up/down: pinch zoom.","B: Back.  Y (left hand): Home.","Grip the phone housing to pick it up.","While held: free hand still scrolls.","Holding hand: stick + press sets depth.","Pinch works in apps that support zoom.","Hide keeps Android and audio running.","Reopen: MagicShelf Show / Configure."};
+  for(int i=0;i<11;i++)c.text(24,230+i*39,lines[i],21,.81,.9,.94);
+  extraButton(c,700,70,PhoneAction::Fit,"Wrist fit & live preview");extraButton(c,790,70,PhoneAction::Display,"Phone / tablet display");extraButton(c,890,70,PhoneAction::HelpDone,"Got it · resume Android");
+ }
+ if(page==3){c.text(24,270,"This hides only the phone view.",25);c.text(24,320,"Android apps and audio keep running.",22);c.text(24,410,"To bring it back:",25);c.text(24,460,"MagicShelf → Show / Configure.",23);c.text(24,550,"To stop Android and audio, use Off.",22);extraButton(c,670,70,PhoneAction::Dock,"Return to shelf instead");extraButton(c,780,70,PhoneAction::ConfirmHide,"Hide until reopened");}
+ if(page==4){c.text(24,245,tabletNext?"Next start: Tablet (experimental)":"Next start: Phone",25);extraButton(c,300,80,PhoneAction::DisplayPhone,"Phone · 720 × 1600");extraButton(c,410,80,PhoneAction::DisplayTablet,"Tablet · 960 × 1280");c.text(24,570,"Apply with MagicShelf Off, then On.",23);c.text(24,625,"Apps and data stay in this creation.",23);c.text(24,705,"Tablet is a wider, larger display.",23);c.text(24,755,"Some Android apps keep phone layouts.",22);c.text(24,835,"Same Android 11 runtime; no OS upgrade.",21);}
 }

@@ -63,9 +63,11 @@ int main(int argc,char**argv){try{
  auto*settings=json_object_from_file((base+"/"+SettingsFile).c_str());if(settings){brightness=std::clamp((float)readnum(settings,"brightness",.7),.25f,1.f);visible=true;wrist=readnum(settings,"wrist",0);docked=readnum(settings,"docked",0);if(docked)wrist=false;size=std::clamp((float)readnum(settings,"size",DefaultSize),.6f,3.f);yaw=readnum(settings,"yaw",0);mode=std::clamp((int)readnum(settings,"mode",0),0,2);
   json_object* savedPose=nullptr;if(json_object_object_get_ex(settings,"room_pose",&savedPose)&&json_object_is_type(savedPose,json_type_array)&&json_object_array_length(savedPose)==16){M restored{};for(int i=0;i<16;i++)restored[i]=json_object_get_double(json_object_array_get_idx(savedPose,i));if(validRoomPose(restored)){world=restored;placed=true;std::cerr<<"Restored user room placement\n";}}
   json_object_put(settings);}
- auto save=[&](){auto*j=json_object_new_object();json_object_object_add(j,"app",json_object_new_string(androidOpen?"android":"pet"));json_object_object_add(j,"brightness",json_object_new_double(brightness));json_object_object_add(j,"visible",json_object_new_boolean(visible));json_object_object_add(j,"wrist",json_object_new_boolean(wrist));json_object_object_add(j,"docked",json_object_new_boolean(docked));json_object_object_add(j,"size",json_object_new_double(size));json_object_object_add(j,"yaw",json_object_new_double(yaw));json_object_object_add(j,"mode",json_object_new_int(mode));if(placed&&validRoomPose(world)){auto*a=json_object_new_array();for(float v:world)json_object_array_add(a,json_object_new_double(v));json_object_object_add(j,"room_pose",a);}json_object_to_file((base+"/"+SettingsFile+".tmp").c_str(),j);json_object_put(j);fs::rename(base+"/"+SettingsFile+".tmp",base+"/"+SettingsFile);};
+WristConfig wristFit[2];int wristHand=0,extraPage=0;bool helpSeen=false,tabletRequested=TabletDisplay;
+ if(auto*j=json_object_from_file((base+"/"+SettingsFile).c_str())){wristHand=std::clamp((int)readnum(j,"wrist_hand",0),0,1);helpSeen=readnum(j,"controls_help_seen",0);tabletRequested=readstr(j,"display_mode","phone")=="tablet";json_object*a=nullptr;if(json_object_object_get_ex(j,"wrist_profiles",&a)&&json_object_is_type(a,json_type_array))for(int n=0;n<2&&n<(int)json_object_array_length(a);n++)wristFit[n].load(json_object_array_get_idx(a,n));json_object_put(j);}
+ auto save=[&](){auto*j=json_object_new_object();json_object_object_add(j,"app",json_object_new_string(androidOpen?"android":"pet"));json_object_object_add(j,"brightness",json_object_new_double(brightness));json_object_object_add(j,"visible",json_object_new_boolean(visible));json_object_object_add(j,"wrist",json_object_new_boolean(wrist));json_object_object_add(j,"docked",json_object_new_boolean(docked));json_object_object_add(j,"size",json_object_new_double(size));json_object_object_add(j,"yaw",json_object_new_double(yaw));json_object_object_add(j,"mode",json_object_new_int(mode));json_object_object_add(j,"wrist_hand",json_object_new_int(wristHand));json_object_object_add(j,"controls_help_seen",json_object_new_boolean(helpSeen));json_object_object_add(j,"display_mode",json_object_new_string(tabletRequested?"tablet":"phone"));auto*fits=json_object_new_array();for(auto&f:wristFit)json_object_array_add(fits,f.json());json_object_object_add(j,"wrist_profiles",fits);if(placed&&validRoomPose(world)){auto*a=json_object_new_array();for(float v:world)json_object_array_add(a,json_object_new_double(v));json_object_object_add(j,"room_pose",a);}json_object_to_file((base+"/"+SettingsFile+".tmp").c_str(),j);json_object_put(j);fs::rename(base+"/"+SettingsFile+".tmp",base+"/"+SettingsFile);};
  auto recenter=[&](M head,bool fromShelf=false){grab.end();docked=false;int columns=std::clamp(dock.layout.count,1,4);float offsetX=fromShelf&&dock.slot>=0?(dock.slot%columns-(columns-1)*.5f)*.24f:-.12f;float offsetY=-.10f-(fromShelf&&dock.slot>=0?dock.slot/columns*.24f:0);V p=point(head,{offsetX,offsetY,-.60f}),h=point(head,{0,0,0});V z=norm(sub(h,p)),x=norm(cross({0,1,0},z)),y=cross(z,x);world=pose(x,y,z,p);placed=true;};
- bool keyboardOwned=false;PetKeyboardRequest petKeyboard;
+  bool keyboardOwned=false;PetKeyboardRequest petKeyboard;
  auto closeKeyboard=[&](){petKeyboard.cancel();if(keyboardOwned){ov->HideKeyboard();keyboardOwned=false;}};
  auto keyboard=[&](){
   if(keyboardOwned)return;
@@ -78,11 +80,11 @@ int main(int argc,char**argv){try{
  auto lastUI=lastSource;auto lastSettingsTap=lastSource;
  auto lastControlsPoll=lastSource,lastBrightnessCommand=lastSource,lastNavigation=std::chrono::steady_clock::now();double controlsRevision=0;
  float fontScale=1.f;bool textSettings=false,appsSettings=false,webSettings=false;bool gripHeld=false;
- bool pointerOnScreen=false,pointerOnHandle=false,queuedClick=false,brightnessDragging=false;VREvent_t lastPointer{};
+ bool pointerOnScreen=false,pointerOnHandle=false,queuedClick=false,brightnessDragging=false,depthAdjusting=false,navAxisAvailable=false;VREvent_t lastPointer{},overlayPointer{};bool overlayScreen=false;int overlayX=0,overlayY=0;uint32_t overlayHand=k_unTrackedDeviceIndexInvalid;int shownCursorX=-1,shownCursorY=-1;uint64_t shownAndroidFrame=0;
  uint32_t pointerController=k_unTrackedDeviceIndexInvalid;int pointerX=0,pointerY=0;
  auto finishBrightness=[&](){if(!brightnessDragging)return;brightnessDragging=false;lastBrightnessCommand=std::chrono::steady_clock::now();save();androidCommand("{\"op\":\"brightness\",\"value\":"+std::to_string(brightness)+"}");};
- auto toggleSettings=[&](bool open){closeKeyboard();finishBrightness();if(androidInput)androidInput->end();settingsOpen=open;textSettings=false;appsSettings=false;webSettings=false;dirty=true;if(!open){uploaded=0;androidUploaded=0;}};
- auto openFromLauncher=[&](){docked=false;visible=true;toggleSettings(true);recallRequested=true;};
+ auto toggleSettings=[&](bool open){closeKeyboard();finishBrightness();if(androidInput)androidInput->end();settingsOpen=open;extraPage=0;textSettings=false;appsSettings=false;webSettings=false;dirty=true;if(!open){uploaded=0;androidUploaded=0;shownAndroidFrame=0;}};
+ auto openFromLauncher=[&](){docked=false;visible=true;toggleSettings(true);recallRequested=true;save();};
  auto returnToDock=[&](const char*reason="command"){
   startupPlacement=true;placementStarted=std::chrono::steady_clock::now();
   if(dock.slot<0)return;
@@ -92,14 +94,15 @@ int main(int argc,char**argv){try{
   pointerOnScreen=pointerOnHandle=false;pointerController=k_unTrackedDeviceIndexInvalid;queuedClick=false;
   toggleSettings(false);save();std::cerr<<"Returned to dock slot "<<dock.slot<<" reason="<<reason<<"\n";
  };
- auto releaseGrab=[&](){
+ auto releaseGrab=[&](){if(androidInput)androidInput->end();
   if(dock.canSnap(mm(world,yawPose(yaw)),size,dockCandidate)){ov->TriggerLaserMouseHapticVibration(device,.06f,100,.4f);returnToDock("drop");}
   else{grab.end();shake.reset();dockCandidate=false;save();std::cerr<<"Room placement saved\n";}
  };
  auto resetPlacement=[&](uint32_t type){if(visible&&dock.slot>=0){std::cerr<<"Placement reset event "<<type<<"\n";returnToDock("VR reset");}};
+ if(!helpSeen){settingsOpen=true;extraPage=2;dirty=true;}
  while(running){auto now=std::chrono::steady_clock::now();returnedHome=false;if(hideRequested){hideRequested=0;visible=false;grab.end();recallRequested=false;pointerOnScreen=false;queuedClick=false;toggleSettings(false);save();std::cerr<<"Hidden by MagicShelf; capture kept alive\n";}if(showRequested){showRequested=0;openFromLauncher();}if(dockRequested){dockRequested=0;returnToDock();}
   if(now-lastSource>std::chrono::seconds(2)){auto*j=AndroidOnly?nullptr:json_object_from_file((base+"/private-source.json").c_str());if(j){uint32_t n=readnum(j,"node");double st=readnum(j,"started");if(n&&(n!=node||st!=started||!capture||capture->failed)){try{capture.reset();input.reset();capture=std::make_unique<Capture>(n,480,1046,(uint64_t)readnum(j,"serial"));input=std::make_unique<GameInput>(readstr(j,"display"));node=n;started=st;autoresume.reset(readnum(j,"autoresume",0),readnum(j,"resume_slot",1));uploaded=0;hasFrame=false;std::cerr<<"Connected private game node="<<node<<" display="<<readstr(j,"display")<<"\n";}catch(std::exception&e){std::cerr<<e.what()<<"\n";}}json_object_put(j);}auto*aj=AndroidOnly?json_object_from_file((base+"/android-source.json").c_str()):nullptr;
-   if(aj){uint32_t n=readnum(aj,"node");double st=readnum(aj,"started");if(n&&(n!=androidNode||st!=androidStarted||!androidCapture||androidCapture->failed)){try{androidInput.reset();androidCapture.reset();androidHasFrame=false;androidCapture=std::make_unique<Capture>(n,720,1600,(uint64_t)readnum(aj,"serial"));androidInput=std::make_unique<AndroidTouch>(readstr(aj,"display"));androidNode=n;androidStarted=st;androidUploaded=0;std::cerr<<"Connected Android display "<<readstr(aj,"display")<<" node="<<n<<"\n";}catch(std::exception&e){std::cerr<<"Android: "<<e.what()<<"\n";}}json_object_put(aj);}else{androidInput.reset();androidCapture.reset();androidHasFrame=false;}
+   if(aj){uint32_t n=readnum(aj,"node");double st=readnum(aj,"started");if(n&&(n!=androidNode||st!=androidStarted||!androidCapture||androidCapture->failed)){try{androidInput.reset();androidCapture.reset();androidHasFrame=false;androidCapture=std::make_unique<Capture>(n,ScreenWidth,ScreenHeight,(uint64_t)readnum(aj,"serial"));androidInput=std::make_unique<AndroidTouch>(readstr(aj,"display"));androidNode=n;androidStarted=st;androidUploaded=0;std::cerr<<"Connected Android display "<<readstr(aj,"display")<<" node="<<n<<"\n";}catch(std::exception&e){std::cerr<<"Android: "<<e.what()<<"\n";}}json_object_put(aj);}else{androidInput.reset();androidCapture.reset();androidHasFrame=false;}
    lastSource=now;dirty=true;}
   if(AndroidOnly&&now-lastControlsPoll>std::chrono::milliseconds(200)){
    lastControlsPoll=now;auto*c=json_object_from_file((base+"/android-controls.json").c_str());
@@ -113,10 +116,10 @@ int main(int argc,char**argv){try{
      &&petTextFieldAt(capture->rgba,capture->info.size.width,capture->info.size.height,petKeyboard.x,petKeyboard.y)){
    input->end();keyboard();
   }
-  if(androidCapture){androidCapture->poll();if(androidCapture->frames!=androidUploaded){if(androidOpen&&!settingsOpen&&visible)renderer.screenPixels(androidCapture->info.size.width,androidCapture->info.size.height,androidCapture->rgba.data());androidUploaded=androidCapture->frames;if(!androidHasFrame){androidHasFrame=true;dirty=true;std::cerr<<"Android screen received\n";}}}if(androidInput)androidInput->tick();
+  if(androidCapture){androidCapture->poll();if(androidCapture->frames!=androidUploaded){androidUploaded=androidCapture->frames;if(!androidHasFrame){androidHasFrame=true;dirty=true;std::cerr<<"Android screen received\n";}}}if(androidInput)androidInput->tick();
   TrackedDevicePose_t poses[k_unMaxTrackedDeviceCount];VRSystem()->GetDeviceToAbsoluteTrackingPose(TrackingUniverseStanding,.011f,poses,k_unMaxTrackedDeviceCount);M head=fromvr(poses[0].mDeviceToAbsoluteTracking);dock.refresh();dock.show(poses[0].bPoseIsValid);if(dock.takeHomeRequest()&&visible)returnToDock("layout changed");if(!placed&&!docked&&poses[0].bPoseIsValid)recenter(head);
   if(startupPlacement&&poses[0].bPoseIsValid){if(!docked||dock.available)startupPlacement=false;else if(now-placementStarted>std::chrono::seconds(1)){recenter(head,true);startupPlacement=false;save();std::cerr<<"Dock unavailable; creation opened in room space\n";}}
-  if(recallRequested&&poses[0].bPoseIsValid){auto left=VRSystem()->GetTrackedDeviceIndexForControllerRole(TrackedControllerRole_LeftHand);if(!wrist||left>=k_unMaxTrackedDeviceCount||!poses[left].bPoseIsValid){recenter(head);haveWristPose=false;}recallRequested=false;save();}
+  if(recallRequested&&poses[0].bPoseIsValid){auto left=VRSystem()->GetTrackedDeviceIndexForControllerRole(wristHand?TrackedControllerRole_RightHand:TrackedControllerRole_LeftHand);if(!wrist||left>=k_unMaxTrackedDeviceCount||!poses[left].bPoseIsValid){recenter(head);haveWristPose=false;}recallRequested=false;save();}
   if(grab.active){
    if(wrist||!visible||!poses[0].bPoseIsValid||grab.controller>=k_unMaxTrackedDeviceCount||!poses[grab.controller].bPoseIsValid){grab.end();save();}
    else{world=grab.follow(fromvr(poses[grab.controller].mDeviceToAbsoluteTracking));VRControllerState_t state{};
@@ -136,22 +139,22 @@ int main(int argc,char**argv){try{
    bool simulatedClick=queuedClick;if(queuedClick){e=lastPointer;e.eventType=VREvent_MouseButtonDown;e.data.mouse.button=VRMouseButton_Left;queuedClick=false;}
    if(dockResetEvent(e.eventType)){resetPlacement(e.eventType);continue;}
    if(returnedHome)continue;
-   if(e.eventType==VREvent_ScrollSmooth&&grab.active){
+   if(e.eventType==VREvent_ScrollSmooth&&grab.active&&depthAdjusting){
     auto source=e.trackedDeviceIndex;
     if(source==0||source==k_unTrackedDeviceIndexInvalid)source=ov->GetPrimaryDashboardDevice();
     bool accepted=grab.queueScrollDepth(source,e.data.scroll.ydelta,e.eventAgeSeconds);
     if(grabDebug&&!accepted&&now-lastGrabLog>std::chrono::seconds(1)){lastGrabLog=now;std::cerr<<"Grab scroll ignored: source="<<source<<" owner="<<grab.controller<<" age="<<e.eventAgeSeconds<<"\n";}
     continue;
    }
-   if(e.eventType==VREvent_FocusLeave){finishBrightness();pointerOnScreen=false;pointerOnHandle=false;if(androidInput)androidInput->end();}
-   if(AndroidOnly&&e.eventType==VREvent_ScrollDiscrete&&pointerOnScreen&&!settingsOpen&&visible&&!grab.active&&androidInput&&ov->IsHoverTargetOverlay(device)){
+   if(e.eventType==VREvent_FocusLeave){finishBrightness();pointerOnScreen=false;overlayScreen=false;pointerOnHandle=false;if(androidInput)androidInput->end();}
+   if(AndroidOnly&&(e.eventType==VREvent_ScrollDiscrete||e.eventType==VREvent_ScrollSmooth)&&!navAxisAvailable&&pointerOnScreen&&!settingsOpen&&visible&&!depthAdjusting&&androidInput&&e.eventAgeSeconds<.25f){
     androidInput->stickScroll(e.data.scroll.xdelta,e.data.scroll.ydelta,.05f,pointerX,pointerY);continue;
    }
    if(e.eventType==VREvent_MouseButtonUp&&e.data.mouse.button==VRMouseButton_Left)finishBrightness();
    if(e.eventType==VREvent_MouseButtonUp&&e.data.mouse.button==VRMouseButton_Left&&androidInput)androidInput->end();
    if(e.eventType==VREvent_MouseButtonUp&&e.data.mouse.button==VRMouseButton_Left&&grab.active&&!gripHeld){if(e.trackedDeviceIndex==grab.controller||e.trackedDeviceIndex==k_unTrackedDeviceIndexInvalid||e.trackedDeviceIndex==0){releaseGrab();}continue;}
    if(e.eventType==VREvent_KeyboardClosed)keyboardOwned=false;
-   if(grab.active)continue;
+   if(grab.active&&(e.trackedDeviceIndex==grab.controller||e.trackedDeviceIndex==k_unTrackedDeviceIndexInvalid))continue;
    // Read chars only from this overlay, not the duplicate global VR events.
    if(e.eventType==VREvent_KeyboardCharInput&&!settingsOpen){std::string value(e.data.keyboard.cNewInput,strnlen(e.data.keyboard.cNewInput,8));if(androidOpen&&androidInput)androidInput->text(value);else if(input)input->text(value);}
    if(e.eventType!=VREvent_MouseMove&&e.eventType!=VREvent_MouseButtonDown)continue;
@@ -163,7 +166,8 @@ int main(int argc,char**argv){try{
    if(down)std::cerr<<"Device input "<<e.data.mouse.x<<","<<e.data.mouse.y<<" hit="<<hit[0]<<","<<hit[1]<<" source="<<index<<"\n";
    bool front=a[2]>ScreenZ;
    pointerOnScreen=front&&onGameScreen(hit);pointerOnHandle=renderer.showGrabHandle&&onGrabHandle(hit);pointerController=index;
-   if(pointerOnScreen){lastPointer=e;lastPointer.trackedDeviceIndex=index;auto targetPixel=screenPixel(hit);pointerX=targetPixel[0];pointerY=targetPixel[1];}
+   overlayScreen=pointerOnScreen;overlayHand=index;
+   if(pointerOnScreen){lastPointer=e;lastPointer.trackedDeviceIndex=index;auto targetPixel=screenPixel(hit);pointerX=targetPixel[0];pointerY=targetPixel[1];overlayPointer=lastPointer;overlayX=pointerX;overlayY=pointerY;}
    if(down&&front&&onHomeButton(hit)){
     if(now-lastSettingsTap>=std::chrono::milliseconds(180)){lastSettingsTap=now;toggleSettings(!settingsOpen);std::cerr<<"Phone settings "<<(settingsOpen?"opened":"closed")<<"\n";}
     continue;
@@ -180,15 +184,15 @@ int main(int argc,char**argv){try{
     auto pixel=settingsOpen?screenPixel(hit,SettingsWidth,SettingsHeight):screenPixel(hit);int x=pixel[0],y=pixel[1];
     if(settingsOpen){
      // Brightness belongs to the VR screen; Android has no hardware backlight.
-     if(AndroidOnly&&!textSettings&&!appsSettings&&(brightnessDragging||(down&&phoneActionAt(x,y)==PhoneAction::BrightnessSlider))){
+     if(AndroidOnly&&!extraPage&&!textSettings&&!appsSettings&&(brightnessDragging||(down&&phoneActionAt(x,y)==PhoneAction::BrightnessSlider))){
       brightnessDragging=true;brightness=phoneBrightnessAt(x);dirty=true;lastBrightnessCommand=now;
       if(simulatedClick)finishBrightness();continue;
      }
      // Consume every screen event here; none may leak through to the game.
      if(down&&now-lastSettingsTap>=std::chrono::milliseconds(180)){
-      lastSettingsTap=now;PhoneAction action=webSettings?webActionAt(x,y):(appsSettings?appActionAt(x,y):(textSettings?fontActionAt(x,y):phoneActionAt(x,y)));
+      lastSettingsTap=now;PhoneAction action=extraPage?extraActionAt(extraPage,x,y):(webSettings?webActionAt(x,y):(appsSettings?appActionAt(x,y):(textSettings?fontActionAt(x,y):phoneActionAt(x,y))));
       switch(action){
-       case PhoneAction::Back:if(webSettings)webSettings=false;else if(textSettings||appsSettings){textSettings=false;appsSettings=false;}else toggleSettings(false);break;
+       case PhoneAction::Back:if(extraPage){helpSeen=true;extraPage=0;}else if(webSettings)webSettings=false;else if(textSettings||appsSettings){textSettings=false;appsSettings=false;}else toggleSettings(false);break;
        case PhoneAction::Apps:appsSettings=true;break;
        case PhoneAction::WebApps:webSettings=true;break;
        case PhoneAction::RetryApps:androidCommand("{\"op\":\"retry_apps\"}");break;
@@ -199,7 +203,28 @@ int main(int argc,char**argv){try{
        case PhoneAction::Home:androidCommand("{\"op\":\"home\"}");toggleSettings(false);break;
        
        case PhoneAction::Room:grab.end();wrist=false;if(docked){world=undockedRoomPose(lastModel,yaw);placed=true;docked=false;}break;
-       case PhoneAction::Hand:grab.end();docked=false;wrist=true;break;
+       case PhoneAction::Hand:case PhoneAction::Fit:extraPage=1;break;
+       case PhoneAction::Help:extraPage=2;break;
+       case PhoneAction::HelpDone:helpSeen=true;toggleSettings(false);break;
+       case PhoneAction::Display:extraPage=4;break;
+       case PhoneAction::DisplayPhone:tabletRequested=false;break;
+       case PhoneAction::DisplayTablet:tabletRequested=true;break;
+       case PhoneAction::LeftWrist:case PhoneAction::RightWrist:wristHand=action==PhoneAction::RightWrist;haveWristPose=false;grab.end();docked=false;wrist=true;break;
+       case PhoneAction::WristLeft:wristFit[wristHand].x=std::max(-.2f,wristFit[wristHand].x-.01f);break;
+       case PhoneAction::WristRight:wristFit[wristHand].x=std::min(.2f,wristFit[wristHand].x+.01f);break;
+       case PhoneAction::WristDown:wristFit[wristHand].y=std::max(-.1f,wristFit[wristHand].y-.01f);break;
+       case PhoneAction::WristUp:wristFit[wristHand].y=std::min(.25f,wristFit[wristHand].y+.01f);break;
+       case PhoneAction::WristNear:wristFit[wristHand].z=std::min(.1f,wristFit[wristHand].z+.01f);break;
+       case PhoneAction::WristFar:wristFit[wristHand].z=std::max(-.35f,wristFit[wristHand].z-.01f);break;
+       case PhoneAction::WristTiltDown:wristFit[wristHand].pitch=std::max(-1.5f,wristFit[wristHand].pitch-.15f);break;
+       case PhoneAction::WristTiltUp:wristFit[wristHand].pitch=std::min(1.5f,wristFit[wristHand].pitch+.15f);break;
+       case PhoneAction::WristRollLeft:wristFit[wristHand].roll=std::max(-1.5f,wristFit[wristHand].roll-.15f);break;
+       case PhoneAction::WristRollRight:wristFit[wristHand].roll=std::min(1.5f,wristFit[wristHand].roll+.15f);break;
+       case PhoneAction::WristSmaller:wristFit[wristHand].scale=std::max(.3f,wristFit[wristHand].scale-.05f);break;
+       case PhoneAction::WristLarger:wristFit[wristHand].scale=std::min(1.4f,wristFit[wristHand].scale+.05f);break;
+       case PhoneAction::WristYawLeft:wristFit[wristHand].yaw=std::max(-1.5f,wristFit[wristHand].yaw-.15f);break;
+       case PhoneAction::WristYawRight:wristFit[wristHand].yaw=std::min(1.5f,wristFit[wristHand].yaw+.15f);break;
+       case PhoneAction::WristReset:wristFit[wristHand]=WristConfig{};break;
        case PhoneAction::Dock:returnToDock();break;
        case PhoneAction::Recenter:visible=true;wrist=false;if(poses[0].bPoseIsValid)recenter(head);break;
        case PhoneAction::Smaller:size=std::max(.6f,size-.2f);break;
@@ -209,7 +234,8 @@ int main(int argc,char**argv){try{
        case PhoneAction::TurnLeft:yaw-=.25f;break;
        case PhoneAction::TurnRight:yaw+=.25f;break;
        case PhoneAction::Keyboard:toggleSettings(false);keyboard();break;
-       case PhoneAction::Hide:visible=false;grab.end();toggleSettings(false);break;
+       case PhoneAction::Hide:extraPage=3;break;
+       case PhoneAction::ConfirmHide:visible=false;grab.end();toggleSettings(false);break;
        case PhoneAction::Reset:yaw=0;size=DefaultSize;returnToDock("position and size reset");break;
        case PhoneAction::BrightnessSlider:break;
        default:if(auto id=phoneAppId(action)){androidCommand(std::string("{\"op\":\"open_app\",\"app\":\"")+id+"\"}");toggleSettings(false);}break;
@@ -230,13 +256,21 @@ int main(int argc,char**argv){try{
    }else{finishBrightness();if(androidInput&&androidOpen)androidInput->end();}
   }
   if(navigation){
-   auto controller=grab.active?grab.controller:pointerController;
+   auto controller=pointerController;bool rayFocused=false;
+   auto wristDevice=VRSystem()->GetTrackedDeviceIndexForControllerRole(wristHand?TrackedControllerRole_RightHand:TrackedControllerRole_LeftHand);
+   if(visible&&overlayScreen&&ov->IsHoverTargetOverlay(device)&&overlayHand<k_unMaxTrackedDeviceCount&&poses[overlayHand].bPoseIsValid&&(!grab.active||overlayHand!=grab.controller)&&(!wrist||overlayHand!=wristDevice)){controller=overlayHand;rayFocused=true;pointerOnScreen=true;pointerX=overlayX;pointerY=overlayY;lastPointer=overlayPointer;}
+   if(!rayFocused&&phoneRayMayFocus(ov->IsDashboardVisible(),ov->IsHoverTargetOverlay(device)))for(auto role:{TrackedControllerRole_RightHand,TrackedControllerRole_LeftHand}){auto hand=VRSystem()->GetTrackedDeviceIndexForControllerRole(role);if(hand>=k_unMaxTrackedDeviceCount||!poses[hand].bPoseIsValid||(wrist&&hand==wristDevice)||(grab.active&&hand==grab.controller))continue;
+    auto ray=phoneRay(lastModel,lastSize,fromvr(poses[hand].mDeviceToAbsoluteTracking));if(!ray.hit)continue;
+    controller=hand;rayFocused=true;pointerOnScreen=true;auto px=screenPixel(ray.local);pointerX=px[0];pointerY=px[1];V projected=point(inverse(lastPlane),point(lastModel,mul(ray.local,lastSize)));lastPointer={};lastPointer.trackedDeviceIndex=hand;lastPointer.data.mouse.x=(projected[0]/lastWidth+.5f)*512;lastPointer.data.mouse.y=(projected[1]/lastWidth+.5f)*512;break;
+   }
+   if(!rayFocused){pointerOnScreen=false;if(grab.active){controller=grab.controller;pointerX=ScreenWidth/2;pointerY=ScreenHeight/2;}}
+
    bool nearHand=false;
-   if(!grab.active&&!wrist&&visible)for(auto handRole:{TrackedControllerRole_LeftHand,TrackedControllerRole_RightHand}){auto hand=VRSystem()->GetTrackedDeviceIndexForControllerRole(handRole);if(hand>=k_unMaxTrackedDeviceCount||!poses[hand].bPoseIsValid)continue;V local=mul(point(inverse(lastModel),point(fromvr(poses[hand].mDeviceToAbsoluteTracking),{0,0,0})),1/lastSize);if(std::abs(local[0])<BodyX+.07f&&std::abs(local[1])<BodyY+.07f&&std::abs(local[2]-ScreenZ)<.10f){controller=hand;nearHand=true;break;}}
-   bool focused=visible&&(!docked||dock.available)&&poses[0].bPoseIsValid&&controller<k_unMaxTrackedDeviceCount&&poses[controller].bPoseIsValid&&(grab.active||nearHand||ov->IsHoverTargetOverlay(device));
+   if(!grab.active&&!rayFocused&&!wrist&&visible)for(auto handRole:{TrackedControllerRole_LeftHand,TrackedControllerRole_RightHand}){auto hand=VRSystem()->GetTrackedDeviceIndexForControllerRole(handRole);if(hand>=k_unMaxTrackedDeviceCount||!poses[hand].bPoseIsValid)continue;V local=mul(point(inverse(lastModel),point(fromvr(poses[hand].mDeviceToAbsoluteTracking),{0,0,0})),1/lastSize);if(std::abs(local[0])<BodyX+.07f&&std::abs(local[1])<BodyY+.07f&&std::abs(local[2]-ScreenZ)<.10f){controller=hand;nearHand=true;break;}}
+   bool focused=visible&&(!docked||dock.available)&&poses[0].bPoseIsValid&&controller<k_unMaxTrackedDeviceCount&&poses[controller].bPoseIsValid&&(grab.active||nearHand||rayFocused);
    int role=controller<k_unMaxTrackedDeviceCount?(int)VRSystem()->GetControllerRoleForTrackedDeviceIndex(controller):0;
    float dt=std::chrono::duration<float>(now-lastNavigation).count();lastNavigation=now;
-   auto action=navigation->update(focused,role,dt,grab.active);
+   auto action=navigation->update(focused,role,dt,grab.active,grab.active?(int)VRSystem()->GetControllerRoleForTrackedDeviceIndex(grab.controller):0);
    if(grab.active&&gripHeld&&(!action.gripAvailable||!action.grip)){releaseGrab();gripHeld=false;}
    if(!grab.active&&focused&&!wrist&&action.gripPressed){
     V grabbed=point(lastModel,{0,0,0});
@@ -245,24 +279,27 @@ int main(int argc,char**argv){try{
     shake.reset();dockCandidate=false;grab.beginAt(controller,fromvr(poses[controller].mDeviceToAbsoluteTracking),world,grabbed,false);gripHeld=true;
     ov->TriggerLaserMouseHapticVibration(device,.035f,80,.25f);std::cerr<<"Grip pickup controller="<<controller<<"\n";
    }
-   if(grab.active){
-    float depth=action.scrollY;bool axisAvailable=action.axisAvailable;
-    if(!action.axisAvailable){VRControllerState_t state{};if(VRSystem()->GetControllerState(controller,&state,sizeof(state)))for(int axis=0;axis<5;axis++)if(VRSystem()->GetInt32TrackedDeviceProperty(controller,(ETrackedDeviceProperty)(Prop_Axis0Type_Int32+axis))==k_eControllerAxis_Joystick){depth=ControllerNav::deflection(state.rAxis[axis].y);axisAvailable=true;break;}}
-    bool scrollInput=grab.pendingScrollDepth!=0;float before=grab.distance;
-    grab.updateDepth(depth,dt,axisAvailable);world=grab.follow(fromvr(poses[controller].mDeviceToAbsoluteTracking));
-    if(grabDebug&&now-lastGrabLog>std::chrono::seconds(1)){lastGrabLog=now;std::cerr<<"Grab depth controller="<<controller<<" input="<<(axisAvailable?"axis":scrollInput?"scroll":"none")<<" distance="<<grab.distance<<" change="<<grab.distance-before<<"\n";}
-   }else if(focused&&AndroidOnly){
+   navAxisAvailable=focused&&action.axisAvailable;depthAdjusting=grab.active&&action.depth;
+   if(grab.active){float before=grab.distance;grab.pendingScrollDepth=depthAdjusting?grab.pendingScrollDepth:0;grab.updateDepth(depthAdjusting?action.depthY:0,dt,true);world=grab.follow(fromvr(poses[grab.controller].mDeviceToAbsoluteTracking));}
+   if(focused&&AndroidOnly){
    if(action.home){if(androidInput)androidInput->end();androidCommand("{\"op\":\"home\"}");toggleSettings(false);std::cerr<<"Controller Home\n";}
    else if(action.back){if(androidInput)androidInput->end();if(settingsOpen)toggleSettings(false);else androidCommand("{\"op\":\"back\"}");std::cerr<<"Controller Back\n";}
-   else if(action.click){if(androidInput)androidInput->stopScroll();queuedClick=true;std::cerr<<"Controller click\n";}
-   if(!settingsOpen&&androidInput&&!action.click&&!action.back&&!action.home){androidInput->stickScroll(action.scrollX,action.scrollY,dt,pointerX,pointerY);if(action.x||action.y)std::cerr<<"Controller scroll "<<action.x<<","<<action.y<<"\n";}
-   }
+   else if(action.click&&rayFocused){if(androidInput)androidInput->stopScroll();queuedClick=true;std::cerr<<"Controller click\n";}
+   if(!settingsOpen&&androidInput&&!action.click&&!action.back&&!action.home){if(!phoneDepthConsumesGesture(grab.active,grab.controller,controller,action.depth)){if(action.pinch)androidInput->pinch(action.scrollY,dt,pointerX,pointerY);else androidInput->stickScroll(action.scrollX,action.scrollY,dt,pointerX,pointerY);}else androidInput->end();if(action.x||action.y)std::cerr<<"Controller scroll "<<action.x<<","<<action.y<<"\n";}
+   }else if(androidInput)androidInput->end();
+  }
+  bool cursor=visible&&pointerOnScreen;
+  int cx=cursor?pointerX:-1,cy=cursor?pointerY:-1;
+  if(cx!=shownCursorX||cy!=shownCursorY)dirty=true;
+  if(androidHasFrame&&androidCapture&&visible&&!settingsOpen&&(shownAndroidFrame!=androidCapture->frames||cx!=shownCursorX||cy!=shownCursorY)){
+   if(cursor){auto frame=androidCapture->rgba;phoneCursor(frame,androidCapture->info.size.width,androidCapture->info.size.height,cx,cy);renderer.screenPixels(androidCapture->info.size.width,androidCapture->info.size.height,frame.data());}
+   else renderer.screenPixels(androidCapture->info.size.width,androidCapture->info.size.height,androidCapture->rgba.data());shownAndroidFrame=androidCapture->frames;
   }
   if(!visible||!poses[0].bPoseIsValid||(docked&&!dock.available)){finishBrightness();if(androidInput)androidInput->end();}
   if(androidOpen&&!androidHasFrame&&!settingsOpen&&dirty){ui.fill(.035,.048,.065);ui.text(30,480,"Starting Android...",33);ui.text(30,530,AndroidOnly?"Bottom bezel button: settings":"Center button: settings",23);renderer.screen(ui);dirty=false;}
   if(settingsOpen&&(dirty||now-lastUI>std::chrono::seconds(appsSettings?2:30))){
    auto*care=json_object_from_file((base+"/care-mode.json").c_str());bool protectedCare=readstr(care,"mode")=="no-death";if(care)json_object_put(care);
-   if(webSettings)drawPhoneWebApps(ui);else if(appsSettings){auto*progress=json_object_from_file((base+"/starter-apps-progress.json").c_str());int ready=readnum(progress,"ready",0),total=readnum(progress,"total",15);if(progress)json_object_put(progress);drawPhoneApps(ui,ready,total);}else if(textSettings)drawPhoneTextSettings(ui,fontScale);else drawPhoneSettings(ui,wrist,size,AndroidOnly?androidHasFrame:hasFrame,protectedCare,brightness,docked);renderer.screen(ui);dirty=false;lastUI=now;
+   if(extraPage)drawPhoneExtra(ui,extraPage,wristFit[wristHand],wristHand,tabletRequested,wrist);else if(webSettings)drawPhoneWebApps(ui);else if(appsSettings){auto*progress=json_object_from_file((base+"/starter-apps-progress.json").c_str());int ready=readnum(progress,"ready",0),total=readnum(progress,"total",15);if(progress)json_object_put(progress);drawPhoneApps(ui,ready,total);}else if(textSettings)drawPhoneTextSettings(ui,fontScale);else drawPhoneSettings(ui,wrist,size,AndroidOnly?androidHasFrame:hasFrame,protectedCare,brightness,docked);auto*pixels=ui.pixels();if(cursor)phoneCursor(ui.rgba,ui.w,ui.h,pointerX*ui.w/ScreenWidth,pointerY*ui.h/ScreenHeight);renderer.screenPixels(ui.w,ui.h,pixels);dirty=false;lastUI=now;
   }
   if(grab.active){
    M hand=fromvr(poses[grab.controller].mDeviceToAbsoluteTracking);
@@ -275,11 +312,12 @@ int main(int argc,char**argv){try{
     dockCandidate=candidate;
    }
   }else{shake.reset();dockCandidate=false;}
+  shownCursorX=cx;shownCursorY=cy;
   renderer.brightness=brightness;
   renderer.dockGrabHandle=dockCandidate;
   renderer.showGrabHandle=!wrist&&(ov->IsDashboardVisible()||grab.active||ov->IsHoverTargetOverlay(device));
   renderer.highlightGrabHandle=grab.active||pointerOnHandle;
-  if(visible&&(docked?dock.available:placed)&&poses[0].bPoseIsValid){M model=docked?dock.model(size):world;float effective=docked?dock.size(size):size;bool show=true;if(wrist){auto idx=VRSystem()->GetTrackedDeviceIndexForControllerRole(TrackedControllerRole_LeftHand);if(idx<k_unMaxTrackedDeviceCount&&poses[idx].bPoseIsValid){model=mm(fromvr(poses[idx].mDeviceToAbsoluteTracking),pose({1,0,0},{0,0,-1},{0,1,0},{0,.055f,-.10f}));wristFallback=model;haveWristPose=true;effective*=.55f;}else if(haveWristPose){model=wristFallback;effective*=.55f;}}
+  if(visible&&(docked?dock.available:placed)&&poses[0].bPoseIsValid){float effective=docked?phoneDockFit(size,dock.effective.objectHeight,dock.effective.spacing):size;M model=docked?dockObjectPose(dock.slotPose,effective):world;bool show=true;if(wrist){auto idx=VRSystem()->GetTrackedDeviceIndexForControllerRole(wristHand?TrackedControllerRole_RightHand:TrackedControllerRole_LeftHand);if(idx<k_unMaxTrackedDeviceCount&&poses[idx].bPoseIsValid){model=mm(fromvr(poses[idx].mDeviceToAbsoluteTracking),wristFit[wristHand].transform());wristFallback=model;haveWristPose=true;effective*=wristFit[wristHand].scale;}else if(haveWristPose){model=wristFallback;effective*=wristFit[wristHand].scale;}}
    if(!docked)model=mm(model,yawPose(yaw));V p=point(model,{0,0,ScreenZ*effective}),h=point(head,{0,0,0}),z=norm(sub(h,p)),x=norm(cross({0,1,0},z)),y=cross(z,x);M plane=pose(x,y,z,p);float width=InteractionPlaneWidth*effective;
    if(show&&dot(sub(h,p),sub(h,p))>.03f){
     V eye[2];for(int i=0;i<2;i++)eye[i]=point(mm(head,fromvr(VRSystem()->GetEyeToHeadTransform((EVREye)i))),{0,0,0});renderer.mode=(androidOpen?androidHasFrame:hasFrame)?mode:-1;renderer.draw(plane,model,eye[0],eye[1],width,effective,false);glFinish();Texture_t texture{(void*)(uintptr_t)renderer.tex,TextureType_OpenGL,ColorSpace_Gamma};check(ov->SetOverlayTexture(device,&texture),"Phone texture");check(ov->SetOverlayWidthInMeters(device,width),"Phone width");auto tr=tovr(plane);check(ov->SetOverlayTransformAbsolute(device,TrackingUniverseStanding,&tr),"Phone placement");check(ov->ShowOverlay(device),"Phone show");lastPlane=plane;lastModel=model;lastSize=effective;lastWidth=width;}else ov->HideOverlay(device);

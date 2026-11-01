@@ -1,10 +1,21 @@
 #include "placement.h"
 #include "phone_ui.h"
+#include "dock_layout.h"
 #include <cassert>
 void near(M a,M b){for(int i=0;i<16;i++)assert(fabsf(a[i]-b[i])<.00002f);}
 M rotate(float angle,V position){return pose({cosf(angle),0,-sinf(angle)},{0,1,0},{sinf(angle),0,cosf(angle)},position);}
 int main(){
  int tested=0;
+ {std::ifstream mesh(std::string(AssetDirectory)+"/device.mesh",std::ios::binary);char magic[4];uint32_t batches=0,count=0;mesh.read(magic,4);mesh.read((char*)&batches,4);mesh.read((char*)&count,4);assert(mesh&&std::string(magic,4)=="DPH2");mesh.seekg(12+batches*16);float extent=0;for(uint32_t i=0;i<count;i++){Vertex v{};mesh.read((char*)&v,sizeof(v));extent=std::max(extent,fabsf(v.x));}assert(mesh&&fabsf(extent-ActualBodyHalfWidth)<.000001f);}
+ assert(extraActionAt(3,120,800)==PhoneAction::ConfirmHide);
+ assert(extraActionAt(4,240,450)==PhoneAction::DisplayTablet);
+ assert(extraActionAt(4,0,450)==PhoneAction::NoAction);
+ assert(extraActionAt(1,350,680)==PhoneAction::WristYawRight);
+
+ for(float spacing:{.12f,.13f,.18f,.5f}){float fitted=phoneDockFit(3,.18f,spacing);assert(2*ActualBodyHalfWidth*fitted<=spacing-std::min(.012f,spacing*.1f)+.000001f);M displayed=dockObjectPose(identity(),fitted);assert(fabsf(point(displayed,{0,-BodyY*fitted,0})[1])<.000001f);}
+ assert(fabsf(phoneDockFit(3,.18f,.18f)-dockObjectSize(3,.18f))<.000001f);
+ assert(phoneDockFit(.6f,.18f,.18f)==.6f);
+
  for(int n=0;n<500;n++){
   float angle=n*.013f,size=.6f+(n%25)*.1f;
   M model=rotate(angle,{-.2f,1.2f,-.7f});
